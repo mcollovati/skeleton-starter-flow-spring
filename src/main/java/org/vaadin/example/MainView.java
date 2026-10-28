@@ -18,7 +18,12 @@ import com.vaadin.flow.router.Route;
  * <p>
  * {@code addEventDetail(Class)} and {@code getEventDetail(Class)} have the
  * same problem for nested types, because the detail object is only rebuilt
- * one level deep.
+ * one level deep. Both are fixed by vaadin/flow#26716 (cases 1 and 5).
+ * <p>
+ * Still open: {@code addEventData(Class)} and {@code addEventDetail(Class)}
+ * ignore {@code @JsonProperty} (cases 2 and 6), and a {@code @JsonProperty}
+ * name with dots on a nested property is split in the wrong place when the
+ * nested objects are rebuilt (case 7).
  */
 @Route
 public class MainView extends VerticalLayout {
@@ -49,10 +54,16 @@ public class MainView extends VerticalLayout {
     public record RenamedRgbColor(@JsonProperty("r") int red, int g, int b) {
     }
 
+    /** A nested record with a dotted @JsonProperty name. */
+    public record NestedDottedData(Inner event) {
+        public record Inner(@JsonProperty("detail.x") int x) {
+        }
+    }
+
     public MainView() {
         add(new H2("Case 1: Javadoc example (nested record)"));
         add(new Paragraph("Expected: MouseEventData[event=EventDetails[...]]. "
-                + "Actual: MouseEventData[event=null]."));
+                + "Before vaadin/flow#26716: MouseEventData[event=null]."));
         Div nested = clickArea();
         Pre nestedOut = new Pre();
         nested.getElement().addEventListener("click", e -> {
@@ -104,8 +115,8 @@ public class MainView extends VerticalLayout {
         add(new H2("Case 5: nested detail record"));
         add(new Paragraph("Clicking fires a \"drag\" event with detail "
                 + "{start: {x: 1, y: 2}, end: {x: 3, y: 4}}. Expected: "
-                + "DragDetail[start=Position[x=1, y=2], ...]. Actual: "
-                + "DragDetail[start=null, end=null]."));
+                + "DragDetail[start=Position[x=1, y=2], ...]. Before "
+                + "vaadin/flow#26716: DragDetail[start=null, end=null]."));
         Div nestedDetail = customEventArea("drag",
                 "{start: {x: 1, y: 2}, end: {x: 3, y: 4}}");
         Pre nestedDetailOut = new Pre();
@@ -130,6 +141,22 @@ public class MainView extends VerticalLayout {
                     + "\ndecoded:  " + data);
         }).addEventDetail(RenamedRgbColor.class);
         add(renamedDetail, renamedDetailOut);
+
+        add(new H2("Case 7: nested property with a dotted @JsonProperty"));
+        add(new Paragraph("Clicking fires a \"pick\" event with detail "
+                + "{x: 5}. The expression \"event.detail.x\" is added as a "
+                + "string, so the value is sent. The nested objects are "
+                + "rebuilt by splitting the key on every dot, but Jackson "
+                + "expects {\"event\": {\"detail.x\": 5}}. Expected: "
+                + "NestedDottedData[event=Inner[x=5]]. Actual: x=0."));
+        Div dotted = customEventArea("pick", "{x: 5}");
+        Pre dottedOut = new Pre();
+        dotted.getElement().addEventListener("pick", e -> {
+            NestedDottedData data = e.getEventData(NestedDottedData.class);
+            dottedOut.setText("raw JSON: " + e.getEventData()
+                    + "\ndecoded:  " + data);
+        }).addEventData("event.detail.x");
+        add(dotted, dottedOut);
     }
 
     /**
