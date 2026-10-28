@@ -15,6 +15,10 @@ import com.vaadin.flow.router.Route;
  * The client sends event data with flat keys such as
  * {@code {"event.button": 0}}, but {@code getEventData(Class)} passes that
  * JSON to Jackson as is, so a nested record gets {@code null}.
+ * <p>
+ * {@code addEventDetail(Class)} and {@code getEventDetail(Class)} have the
+ * same problem for nested types, because the detail object is only rebuilt
+ * one level deep.
  */
 @Route
 public class MainView extends VerticalLayout {
@@ -29,6 +33,20 @@ public class MainView extends VerticalLayout {
     public record FlatMouseEventData(
             @JsonProperty("event.button") int button,
             @JsonProperty("event.clientX") int clientX) {
+    }
+
+    /** A flat detail record. */
+    public record RgbColor(int r, int g, int b) {
+    }
+
+    /** A nested detail record. */
+    public record DragDetail(Position start, Position end) {
+        public record Position(int x, int y) {
+        }
+    }
+
+    /** A detail record with a renamed property. */
+    public record RenamedRgbColor(@JsonProperty("r") int red, int g, int b) {
     }
 
     public MainView() {
@@ -69,6 +87,61 @@ public class MainView extends VerticalLayout {
                     + "\ndecoded:  " + data);
         }).addEventData("event.button").addEventData("event.clientX");
         add(control, controlOut);
+
+        add(new H2("Case 4: control, flat detail record"));
+        add(new Paragraph("Clicking fires a \"color-change\" event with "
+                + "detail {r: 255, g: 128, b: 64}. Decoding works."));
+        Div flatDetail = customEventArea("color-change",
+                "{r: 255, g: 128, b: 64}");
+        Pre flatDetailOut = new Pre();
+        flatDetail.getElement().addEventListener("color-change", e -> {
+            RgbColor data = e.getEventDetail(RgbColor.class);
+            flatDetailOut.setText("raw JSON: " + e.getEventData()
+                    + "\ndecoded:  " + data);
+        }).addEventDetail(RgbColor.class);
+        add(flatDetail, flatDetailOut);
+
+        add(new H2("Case 5: nested detail record"));
+        add(new Paragraph("Clicking fires a \"drag\" event with detail "
+                + "{start: {x: 1, y: 2}, end: {x: 3, y: 4}}. Expected: "
+                + "DragDetail[start=Position[x=1, y=2], ...]. Actual: "
+                + "DragDetail[start=null, end=null]."));
+        Div nestedDetail = customEventArea("drag",
+                "{start: {x: 1, y: 2}, end: {x: 3, y: 4}}");
+        Pre nestedDetailOut = new Pre();
+        nestedDetail.getElement().addEventListener("drag", e -> {
+            DragDetail data = e.getEventDetail(DragDetail.class);
+            nestedDetailOut.setText("raw JSON: " + e.getEventData()
+                    + "\ndecoded:  " + data);
+        }).addEventDetail(DragDetail.class);
+        add(nestedDetail, nestedDetailOut);
+
+        add(new H2("Case 6: detail record with @JsonProperty"));
+        add(new Paragraph("Same event as case 4. addEventDetail(Class) "
+                + "registers \"event.detail.red\" instead of the "
+                + "@JsonProperty name \"r\". Expected: red=255. Actual: "
+                + "red=0."));
+        Div renamedDetail = customEventArea("color-change",
+                "{r: 255, g: 128, b: 64}");
+        Pre renamedDetailOut = new Pre();
+        renamedDetail.getElement().addEventListener("color-change", e -> {
+            RenamedRgbColor data = e.getEventDetail(RenamedRgbColor.class);
+            renamedDetailOut.setText("raw JSON: " + e.getEventData()
+                    + "\ndecoded:  " + data);
+        }).addEventDetail(RenamedRgbColor.class);
+        add(renamedDetail, renamedDetailOut);
+    }
+
+    /**
+     * Creates a click area that fires a custom event with the given detail
+     * when clicked.
+     */
+    private static Div customEventArea(String eventName, String detail) {
+        Div area = clickArea();
+        area.getElement().executeJs("this.addEventListener('click', () => "
+                + "this.dispatchEvent(new CustomEvent($0, {detail: " + detail
+                + "})))", eventName);
+        return area;
     }
 
     private static Div clickArea() {
