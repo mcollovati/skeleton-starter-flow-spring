@@ -13,6 +13,7 @@ import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
 import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.CspViolationException;
 
 /**
  * Exercises every supported shape of a JsSnippet (PR #26729). Each case
@@ -105,10 +106,22 @@ public class SnippetView extends VerticalLayout {
                 out -> out.executeJs(Sink.class)
                         .showDash(S.prefixed("x", "y", "z")));
 
-        // Interop: a snippet also works when passed to string executeJs, but
-        // that expression is itself compiled from a string (needs unsafe-eval).
-        run("viaString", "stringy: world", out -> out
-                .executeJs("this.textContent = $0('world')", S.labeled("stringy")));
+        // Contrast: a string executeJs expression is compiled with new
+        // Function, which needs unsafe-eval. Under CspMode.STRICT the server
+        // refuses it with a CspViolationException before it is ever sent, so the
+        // snippet (still eval-free itself) never reaches a compile step.
+        Div viaString = new Div();
+        viaString.add(new Paragraph("viaString (expect: blocked server-side)"));
+        Div viaStringOut = new Div();
+        viaStringOut.setId("viaString");
+        viaString.add(viaStringOut);
+        add(viaString);
+        try {
+            viaStringOut.getElement().executeJs("this.textContent = $0('world')",
+                    S.labeled("stringy"));
+        } catch (CspViolationException e) {
+            viaStringOut.setText("blocked: " + e.getMessage());
+        }
 
         add(new Paragraph("Each row shows '<case> = <result>'. Declared cases"
                 + " run without unsafe-eval; 'viaString' uses a string"
