@@ -20,3 +20,8 @@ drivers/
 error-screenshots/
 webpack.generated.js
 src/main/bundles/
+package.json
+package-lock.json
+tsconfig.json
+types.d.ts
+node_modules/
