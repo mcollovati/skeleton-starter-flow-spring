@@ -304,14 +304,14 @@ public class EventDataView extends VerticalLayout {
     // ---------------------------------------------------------------------
 
     private void detachedCapture() {
-        section("F1. Captured element is removed",
+        section("F1. Captured element is removed (fixed in aa26a579d7)",
                 "Click the button: two lines (capture = 'ruler2', and plain"
                         + " listener). Click 'Remove ruler', then click the"
-                        + " button again. Bug: nothing at all is sent (not even"
-                        + " the plain listener), and the browser console shows"
-                        + " a TypeError. Expected: the capture is null and the"
-                        + " plain listener still runs. 'Add ruler back' makes"
-                        + " it work again.");
+                        + " button again. Expected: the capture is null and"
+                        + " the plain listener still runs. 'Add ruler back'"
+                        + " gives 'ruler2' again. Before the fix, nothing at"
+                        + " all was sent (not even to the plain listener), and"
+                        + " the browser console showed a TypeError.");
         ruler2Setup();
     }
 
@@ -339,19 +339,20 @@ public class EventDataView extends VerticalLayout {
     }
 
     private void debounceMerge() {
-        Output out = section("F3. Debounce settings are shared between"
-                + " captures of the same filter method",
+        Output out = section("F3. Debounce settings of filters from the same"
+                + " method (fixed in aa26a579d7)",
                 "Press Enter, then Escape, in the first field (declared"
                         + " filters). Expected: 'declared Enter, phase LEADING'"
                         + " and, 300 ms later, 'declared Escape, phase"
-                        + " TRAILING'. Bug: the Enter line never shows. Both"
-                        + " filters come from isKey(...), so Enter gets the"
-                        + " 300 ms trailing debounce of the Escape listener."
-                        + " The browser flushes that debouncer at once and"
-                        + " sends Enter only as a 'trailing' event, which the"
-                        + " Enter listener (no debounce) does not accept. The"
-                        + " second field does the same with string filters"
-                        + " (string API) and shows the correct behavior.");
+                        + " TRAILING'. Before the fix, the Enter line never"
+                        + " showed: both filters come from isKey(...), so"
+                        + " Enter got the 300 ms trailing debounce of the"
+                        + " Escape listener. The browser flushed that"
+                        + " debouncer at once and sent Enter only as a"
+                        + " 'trailing' event, which the Enter listener (no"
+                        + " debounce) does not accept. The second field does"
+                        + " the same with string filters (string API), for"
+                        + " comparison.");
         Input declared = new Input();
         declared.setPlaceholder("declared filters");
         declared.getElement()
