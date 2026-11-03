@@ -38,15 +38,19 @@ public class SnippetView extends VerticalLayout {
         JsFunction labeled(String label);
 
         /**
-         * Without {@code @JsCalledWith}: the expression returns the function
-         * itself (the lazy form), so an arbitrary calling convention works.
+         * A capture used together with a called param. Before vaadin/flow#26830
+         * this case used the factory form, return (name) => ..., which is
+         * removed.
          */
-        @JsExpression("return (name) => $0 + ', ' + name + '!';")
+        @JsExpression("return $0 + ', ' + name + '!';")
+        @JsCalledWith("name")
         JsFunction greeter(String greeting);
 
-        /** Empty {@code @JsCalledWith}: the function takes no parameters. */
+        /**
+         * No {@code @JsCalledWith}: the function takes no parameters
+         * (vaadin/flow#26830; before, this needed {@code @JsCalledWith({})}).
+         */
         @JsExpression("return $0;")
-        @JsCalledWith({})
         JsFunction constant(String text);
 
         /** Several called params with a capture ($0) between them. */

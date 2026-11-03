@@ -32,7 +32,10 @@ only on first use:
 
 ```
 # install flow-server, flow-build-tools, the plugins and flow-client from the
-# PR branch feat/load-chunks-without-string-js first
+# PR branch feat/load-chunks-without-string-js first. The snippets are written
+# for vaadin/flow#26830 (no @JsCalledWith means a body with no parameters), so
+# that branch must include the #26830 change; without it, loadEditor() fails
+# in the browser with "returned object instead of a function".
 mvn -Pproduction package -DskipTests
 java -jar target/spring-skeleton-1.0-SNAPSHOT.jar
 # open http://localhost:8080/dynamic-import and watch the network tab

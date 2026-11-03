@@ -11,7 +11,6 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.dom.JsFunction;
-import com.vaadin.flow.js.JsCalledWith;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
 import com.vaadin.flow.js.JsSnippets;
@@ -35,12 +34,10 @@ public class DynamicImportView extends VerticalLayout {
 
         /** The path is a literal, so that the bundler can split it. */
         @JsExpression("return import('Frontend/report-editor/report-editor.js');")
-        @JsCalledWith({})
         JsFunction loadEditor();
 
         /** Captures an element, which addDynamicImport rejects. */
         @JsExpression("return Promise.resolve($0);")
-        @JsCalledWith({})
         JsFunction withElement(Element element);
     }
 
