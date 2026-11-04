@@ -330,11 +330,13 @@ public class EventDataView extends VerticalLayout {
 
     private void captureCreatedBeforeAttach() {
         section("F2. Capture created before the element is attached"
-                + " (documented pitfall)",
-                "Click. Expect 'created in constructor: null | created in"
-                        + " onAttach: lateTarget'. The element is attached in"
-                        + " both cases when the listener runs, but the first"
-                        + " capture was encoded while it was detached.");
+                + " (fixed in 1aea724e8c)",
+                "Click. Expect 'created in constructor: lateTarget | created"
+                        + " in onAttach: lateTarget'. Both captures are"
+                        + " encoded when the listener settings are sent, and"
+                        + " the element is attached by then. Before the fix,"
+                        + " the capture was encoded when it was created, so"
+                        + " the first one was null.");
         add(lateTarget, lateButton, lateOut);
     }
 

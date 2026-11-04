@@ -19,10 +19,11 @@ import com.vaadin.flow.router.Route;
 /**
  * F6: a captured element in a view with {@link PreserveOnRefresh}.
  * <p>
- * The capture is encoded once, as {@code {"@v-node": <id>}}, when the
- * {@link DomEventData} is created. On refresh, the view moves to a new UI, and
- * its nodes get new ids there. The listener is sent again, but with the old
- * id, so the function gets whatever node has that id in the new UI.
+ * On refresh, the view moves to a new UI, and its nodes get new ids there.
+ * Before Flow 1aea724e8c, the capture was encoded once, when the
+ * {@link DomEventData} was created, so the listener was sent again with the
+ * old id and the function got whatever node had that id in the new UI. Now
+ * the capture is encoded each time the listener settings are sent.
  */
 @Route("event-data-preserve")
 @PreserveOnRefresh
@@ -44,13 +45,12 @@ public class PreserveCaptureView extends VerticalLayout {
     private DomEventData<String> described;
 
     public PreserveCaptureView() {
-        add(new H3("F6. Captured element with @PreserveOnRefresh"));
+        add(new H3("F6. Captured element with @PreserveOnRefresh (fixed in 1aea724e8c)"));
         add(new Paragraph("Click: expect 'target'. Refresh the page, then"
-                + " click again. Expected: 'target' again. Bug: the capture"
-                + " still has the old node id, so it finds another node,"
-                + " for example the button itself. The line below the"
-                + " button shows the node id of the target and the encoded"
-                + " capture."));
+                + " click again. Expected: 'target' again. Before the fix,"
+                + " the capture kept the old node id and found another node,"
+                + " for example the button itself. The line below the button"
+                + " shows the node id of the target."));
         for (int i = 0; i < 5; i++) {
             add(new Div("filler " + i));
         }
@@ -73,7 +73,6 @@ public class PreserveCaptureView extends VerticalLayout {
         }
         // Node ids are set when the attach is done, so read them after it
         attachEvent.getUI().access(() -> ids.setText("target node id="
-                + target.getElement().getNode().getId() + ", captures="
-                + described.getEncodedCaptures()));
+                + target.getElement().getNode().getId()));
     }
 }

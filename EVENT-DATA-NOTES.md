@@ -21,6 +21,8 @@ with headless Chrome:
 
 - 2026-11-02, Flow at `3d78f7a61e`: first review.
 - 2026-11-03, Flow at `aa26a579d7`: F1 and F3 fixed, F6 found.
+- 2026-11-04, Flow at `2f424de599`: F2 and F6 fixed (captures are encoded when
+  the listener settings are sent). Scripts: `/tmp/reproducers/tools/event-data-checks`.
 
 ## Part 1: use cases (all work)
 
@@ -46,9 +48,11 @@ string API calls do, and also the click listeners of the helper buttons
   plain listener on the same element. Console: `Cannot read properties of null
   (reading 'getDomNode')`. Now the capture is `null` while the element is
   removed, and the plain listener still runs.
-- **F2, capture created before attach: shown.** A capture created in the
-  constructor is `null` in the browser, and one created in `onAttach` is not.
-  The Javadoc documents this (commit `3d78f7a61e`).
+- **F2, capture created before attach: fixed in `1aea724e8c`.** At `3d78f7a61e`,
+  a capture created in the constructor was `null` in the browser, because it
+  was encoded while the element was detached. Now both captures give
+  `lateTarget`. An element must be attached when the listener settings are
+  sent (the round trip that adds the listener, or earlier).
 - **F3, merged debounce settings: fixed in `aa26a579d7`.** At `3d78f7a61e`, the
   Enter filter (no debounce) and the Escape filter (300 ms trailing) both came
   from `isKey(...)`, so they shared debounce settings. On Enter, the browser
@@ -63,15 +67,40 @@ string API calls do, and also the click listeners of the helper buttons
   string expression under its own name, but the declared value and the string
   filter result are under hashed keys. `getEventData().get(filterExpression)`
   returns `null`.
-- **F6, captures after a refresh with `@PreserveOnRefresh`: open.** The
-  capture is encoded once, with the node id of that time. On refresh, the view
-  moves to a new UI, where its nodes get new ids, but the listener is sent
-  again with the old id:
+- **F6, captures after a refresh with `@PreserveOnRefresh`: fixed in
+  `1aea724e8c`.** At `aa26a579d7`, the capture was encoded once, with the node
+  id of that time. On refresh, the view moves to a new UI, where its nodes get
+  new ids, but the listener was sent again with the old id:
 
   ```
   before refresh: "target"          target node id=9   captures=[{"@v-node":9}]
   after refresh:  "<BUTTON> Click"  target node id=11  captures=[{"@v-node":9}]
   ```
 
-  The function silently gets a different element (the button), not `null` as
-  the `DomEventData` Javadoc says.
+  The function silently got a different element (the button). Now the target is
+  found after each refresh (node id 9, then 11).
+
+## Part 3: preventDefault, stopPropagation and debounce (`/event-data-side-effects`)
+
+`SideEffectsView` has no string JavaScript in the application code, except
+S6. The script `side-effects.mjs --csp` serves the page with
+`Content-Security-Policy: script-src 'self' 'unsafe-inline'`, so every
+`new Function` in the browser fails. Checked on 2026-11-04 with the local
+branch `25658-event-data-snippets-simplified` (same behavior as the PR for
+these cases).
+
+| Case | Flow compiles | Without CSP | Without `unsafe-eval` | Server CSP warning |
+|---|---|---|---|---|
+| S1 `preventDefault()`, no filter | `event.preventDefault()` | works | **broken**: not prevented, no event | yes |
+| S2 `preventDefault()` + declared filter | nothing | works | works | **yes (false)** |
+| S3 `stopPropagation()` + declared filter | nothing | works | works | **yes (false)** |
+| S4 `debounce()`, no filter | `1` | works | **broken**: no event | **no** |
+| S5 filtered + unfiltered listeners | `1` | works | **broken**: no event | **no** |
+| S6 `preventDefault()` + string filter | the filter strings | works | broken (expected) | yes |
+
+S4 and S5 are the worst: Flow adds the always-true filter `1` itself, so the
+server never warns, but the event is lost under a strict CSP.
+
+With the CSP header, the console also shows a Flow `executeJs` string for a
+`window-resize` listener, and Vite WebSocket errors that come from serving
+the page through Playwright; both are not part of these cases.
