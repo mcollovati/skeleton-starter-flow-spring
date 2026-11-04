@@ -90,7 +90,7 @@ public class SideEffectsView extends VerticalLayout {
         input.getElement()
                 .addEventListener("keydown",
                         e -> out.append("blocked: " + e.getEventData(key)))
-                .setFilter(JS.isKey("x")).addEventData(key).preventDefault();
+                .setFilterExpression(JS.isKey("x")).addEventData(key).preventDefault();
         addCase(out, input);
     }
 
@@ -115,7 +115,7 @@ public class SideEffectsView extends VerticalLayout {
         input.getElement()
                 .addEventListener("keydown",
                         e -> out.append("field stopped Enter"))
-                .setFilter(JS.isKey("Enter")).stopPropagation();
+                .setFilterExpression(JS.isKey("Enter")).stopPropagation();
         addCase(out, parent);
     }
 
@@ -147,7 +147,7 @@ public class SideEffectsView extends VerticalLayout {
         button.setId("s5Button");
         button.getElement()
                 .addEventListener("click", e -> out.append("double click"))
-                .setFilter(JS.clickCount(2));
+                .setFilterExpression(JS.clickCount(2));
         button.getElement().addEventListener("click",
                 e -> out.append("any click"));
         addCase(out, button);

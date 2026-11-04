@@ -240,10 +240,10 @@ public class EventDataView extends VerticalLayout {
         input.getElement()
                 .addEventListener("keydown",
                         e -> out.append("Enter: " + e.getEventData(value)))
-                .setFilter(JS.isKey("Enter")).addEventData(value);
+                .setFilterExpression(JS.isKey("Enter")).addEventData(value);
         input.getElement()
                 .addEventListener("keydown", e -> out.append("Escape"))
-                .setFilter(JS.isKey("Escape"));
+                .setFilterExpression(JS.isKey("Escape"));
         addCase(out, input);
     }
 
@@ -254,9 +254,9 @@ public class EventDataView extends VerticalLayout {
                         + " may also handle Ctrl+S (save page).");
         Input input = new Input();
         input.getElement().addEventListener("keydown", e -> out.append("plain s"))
-                .setFilter(JS.isKeyWithCtrl("s", false));
+                .setFilterExpression(JS.isKeyWithCtrl("s", false));
         input.getElement().addEventListener("keydown", e -> out.append("Ctrl+S"))
-                .setFilter(JS.isKeyWithCtrl("s", true));
+                .setFilterExpression(JS.isKeyWithCtrl("s", true));
         addCase(out, input);
     }
 
@@ -271,7 +271,7 @@ public class EventDataView extends VerticalLayout {
                 .addEventListener("input", e -> out.append(
                         "value = " + e.getEventData(value) + " (phase "
                                 + e.getPhase() + ")"))
-                .setFilter(JS.minLength(3)).addEventData(value).debounce(500);
+                .setFilterExpression(JS.minLength(3)).addEventData(value).debounce(500);
         addCase(out, input);
     }
 
@@ -360,11 +360,11 @@ public class EventDataView extends VerticalLayout {
         declared.getElement()
                 .addEventListener("keydown",
                         e -> out.append("declared Enter, phase " + e.getPhase()))
-                .setFilter(JS.isKey("Enter"));
+                .setFilterExpression(JS.isKey("Enter"));
         declared.getElement()
                 .addEventListener("keydown",
                         e -> out.append("declared Escape, phase " + e.getPhase()))
-                .setFilter(JS.isKey("Escape"))
+                .setFilterExpression(JS.isKey("Escape"))
                 .debounce(300, DebouncePhase.TRAILING);
 
         Input strings = new Input();
