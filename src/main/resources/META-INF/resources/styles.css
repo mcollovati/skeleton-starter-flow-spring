@@ -11,3 +11,17 @@ vaadin-text-field.bordered::part(input-field) {
 }
 
 
+
+/* Element.flashClass("flash"): the class is removed when the animation ends */
+.box {
+  width: 120px;
+  padding: 1em;
+  border: 1px solid var(--lumo-contrast-30pct);
+}
+.box.flash {
+  animation: flash-box 1s;
+}
+@keyframes flash-box {
+  from { background: orange; }
+  to { background: orange; }
+}

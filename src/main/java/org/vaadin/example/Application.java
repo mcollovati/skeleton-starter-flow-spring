@@ -5,20 +5,21 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.server.PWA;
+import com.vaadin.flow.shared.ui.Transport;
 import com.vaadin.flow.theme.lumo.Lumo;
 
 /**
- * The entry point of the Spring Boot application.
- *
- * Use the @PWA annotation make the application installable on phones, tablets
- * and some desktop browsers.
- *
+ * Push uses the WEBSOCKET transport, so that
+ * AuthenticationContext.logout() takes the branch that switches to
+ * WEBSOCKET_XHR and does a round trip before it logs out (PR #26699).
  */
 @SpringBootApplication
 @PWA(name = "Project Base for Vaadin with Spring", shortName = "Project Base")
 @StyleSheet(Lumo.STYLESHEET)
 @StyleSheet("styles.css")
+@Push(transport = Transport.WEBSOCKET)
 public class Application implements AppShellConfigurator {
 
     public static void main(String[] args) {
