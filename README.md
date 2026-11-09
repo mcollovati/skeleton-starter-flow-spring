@@ -1,3 +1,51 @@
+# Typed JavaScript results (vaadin/flow#25811, PR #26890)
+
+This branch tests typed results of `@JsDefinition` methods
+(`JavaScriptResult<T>`), from PR https://github.com/vaadin/flow/pull/26890.
+
+## Setup
+
+The app uses `25.4-SNAPSHOT`. Install Flow from the PR branch
+`25811-typed-js-result-prototype` first. In the Flow repository:
+
+```
+git checkout 25811-typed-js-result-prototype
+mvn install -DskipTests -Dcheckstyle.skip=true -pl flow-server,flow-build-tools,flow-plugins/flow-plugin-base,flow-plugins/flow-maven-plugin,flow-client -am
+```
+
+Then run this app with `-nsu`, so that Maven does not take a newer remote
+snapshot instead of the local one:
+
+```
+mvn -nsu spring-boot:run
+```
+
+## What to check
+
+Open http://localhost:8080/ and click "Run all". Every row shows the
+expected result and the actual one. They must be the same.
+
+- **Conversion**: `Integer`, a `Person` record, `List<Person>`, and a
+  `Promise` read through `toCompletableFuture()`.
+- **JavaScript null**: `JavaScriptResult<JsonNode>` gets a `NullNode`, the same
+  as `PendingJavaScriptResult`. `ObjectNode` and `Integer` get a Java `null`.
+- **Failures**: a value that can not be converted goes to the error handler.
+  Without an error handler it is logged as a WARN by `JsDefinitionProxy`, and
+  a `toCompletableFuture()` added after it on the same result still fails.
+  A wrong JSON node type (an array for `ObjectNode`) goes to the error handler.
+- **Inherited**: `IntValueJs extends ValueJs<Integer>` and
+  `PeopleValueJs extends ValueJs<List<Person>>` convert to the bound type.
+  `RawValueJs extends ValueJs` (raw) is refused. At startup, the build logs
+  an ERROR "Leaving the JavaScript of ...RawValueJs out of the bundle". This
+  is expected.
+
+Then click "Run PendingJavaScriptResult case". This is the released API,
+for comparison: `PendingJavaScriptResult.toCompletableFuture(Integer.class)`
+with the value `'abc'`. The future should fail, but today it never completes:
+the row stays at "future still pending", and the server log shows an
+`IllegalArgumentException` from `DefaultErrorHandler`. This is a bug in the
+released code, not in the PR.
+
 # Project Base for Vaadin and Spring Boot
 
 This project can be used as a starting point to create your own Vaadin application with Spring Boot.
