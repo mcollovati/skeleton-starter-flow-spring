@@ -137,6 +137,16 @@
     <profiles>
         <profile>
             <id>it</id>
+            <dependencies>
+                <!-- Drives a real browser in PushResyncIT. Downloads its own
+                     Chromium on the first run. -->
+                <dependency>
+                    <groupId>com.microsoft.playwright</groupId>
+                    <artifactId>playwright</artifactId>
+                    <version>1.64.0</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
             <build>
                 <plugins>
                     <plugin>

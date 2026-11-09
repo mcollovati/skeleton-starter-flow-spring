@@ -45,3 +45,22 @@ com.vaadin.flow.server.communication.ServerRpcHandler$ResynchronizationRequiredE
 Checked on Vaadin 25.3.5 (the version in `pom.xml`) and on 25.4.0-alpha5
 (`-Dvaadin.version=25.4.0-alpha5`).
 
+
+## Automated check
+
+`PushResyncIT` opens the three URLs in Chromium with Playwright for Java and
+checks that the counter keeps going. Run it with:
+
+```
+mvn verify -Pit
+```
+
+The `it` profile starts the app on port 8080 and adds Playwright as a test
+dependency, so the normal build does not change. Playwright downloads its own
+Chromium on the first run. While the bug is there, one test fails and the two
+controls pass:
+
+```
+[ERROR] PushResyncIT.websocketRecoversFromALostMessage ... 'http://localhost:8080/': the pushed counter stopped (now 5). Connection state: connected
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+```
