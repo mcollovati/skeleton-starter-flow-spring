@@ -27,8 +27,10 @@ expected result and the actual one. They must be the same.
 
 - **Conversion**: `Integer`, a `Person` record, `List<Person>`, and a
   `Promise` read through `toCompletableFuture()`.
-- **JavaScript null**: `JavaScriptResult<JsonNode>` gets a `NullNode`, the same
-  as `PendingJavaScriptResult`. `ObjectNode` and `Integer` get a Java `null`.
+- **JavaScript null**: the `then` handlers of `JavaScriptResult<JsonNode>` get
+  a `NullNode`, the same as `then` of `PendingJavaScriptResult`. `ObjectNode`
+  and `Integer` get a Java `null`. `toCompletableFuture()` completes with a
+  Java `null` for every type, also `JsonNode` (the view does not test this).
 - **Failures**: a value that can not be converted goes to the error handler.
   Without an error handler it is logged as a WARN by `JsDefinitionProxy`, and
   a `toCompletableFuture()` added after it on the same result still fails.
