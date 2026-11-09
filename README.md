@@ -1,99 +1,63 @@
-# Project Base for Vaadin and Spring Boot
+# Reproducer: resynchronization request over WebSocket push is never answered
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+With push transport `WEBSOCKET`, the client sends its requests over the
+WebSocket too. When a pushed message is lost, the client asks the server to
+resynchronize. On the WebSocket path the server does not answer: `PushHandler`
+does not handle `ResynchronizationRequiredException`, so it is logged as
+"Unexpected error" and the UI stops updating. The client still reports itself
+as `connected`.
 
-The best way to create your own project based on this starter is [start.vaadin.com](https://start.vaadin.com/) - you can get only the necessary parts and choose the package naming you want to use.
+The XHR path (`UidlRequestHandler`) handles the same exception and sends the
+full state, so with `WEBSOCKET_XHR` the same lost message is recovered.
 
-## Running the Application
-There are two ways to run the application :  using `mvn spring-boot:run` or by running the `Application` class directly from your IDE.
+## The app
 
-You can use any IDE of your preference,but we suggest Eclipse or Intellij IDEA.
-Below are the configuration details to start the project using a `spring-boot:run` command. Both Eclipse and Intellij IDEA are covered.
+- `PushCounterView` (`/`) pushes a counter every 500 ms, with no user input.
+- `Application` uses `@Push(transport = Transport.WEBSOCKET)` and inlines
+  `src/main/resources/drop-one-push.js` into the page. That script drops one
+  message the server pushes (the 6th), as a proxy restart or a network problem
+  does.
 
-#### Eclipse
-- Right click on a project folder and select `Run As` --> `Maven build..` . After that a configuration window is opened.
-- In the window set the value of the **Goals** field to `spring-boot:run` 
-- You can optionally select `Skip tests` checkbox
-- All the other settings can be left to default
+## Steps
 
-Once configurations are set clicking `Run` will start the application
+1. `mvn spring-boot:run` (or `mvn package` and `java -jar target/spring-skeleton-1.0-SNAPSHOT.jar`).
+2. Open http://localhost:8080/ and watch the counter.
 
-#### Intellij IDEA
-- On the right side of the window, select Maven --> Plugins--> `spring-boot` --> `spring-boot:run` goal
-- Optionally, you can disable tests by clicking on a `Skip Tests mode` blue button.
+| URL | Result |
+|---|---|
+| `/` | The counter stops at 5, about 5 s after the dropped message. `window.Vaadin.connectionState.state` is still `connected`. |
+| `/?nodrop` | No message is dropped: the counter keeps going. |
+| `/?transport=WEBSOCKET_XHR` | Same dropped message: the client resynchronizes over HTTP and the counter keeps going. |
 
-Clicking on the green run button will start the application.
+Server log for `/` (line numbers from 25.4.0-alpha5):
 
-After the application has started, you can view your it at http://localhost:8080/ in your browser.
-
-
-If you want to run the application locally in the production mode, use `package` and `java -jar target/spring-skeleton-1.0-SNAPSHOT.jar` commands instead.
-### Running Integration Tests
-
-Integration tests are implemented using [Vaadin TestBench](https://vaadin.com/testbench). The tests take a few minutes to run and are therefore included in a separate Maven profile. We recommend running tests with a production build to minimize the chance of development time toolchains affecting test stability. To run the tests using Google Chrome, execute
-
-`mvn verify -Pit`
-
-and make sure you have a valid TestBench license installed.
-
-Profile `it` adds the following parameters to run integration tests:
-```sh
--Dwebdriver.chrome.driver=path_to_driver
--Dcom.vaadin.testbench.Parameters.runLocally=chrome
+```
+WARN  c.v.f.s.communication.ServerRpcHandler : Resynchronizing UI by client's request. A network message was lost before reaching the client and the client is reloading the full UI state. ...
+ERROR c.v.flow.server.DefaultErrorHandler     : Unexpected error: null
+com.vaadin.flow.server.communication.ServerRpcHandler$ResynchronizationRequiredException
+	at com.vaadin.flow.server.communication.ServerRpcHandler.handleRpc(ServerRpcHandler.java:513)
+	at com.vaadin.flow.server.communication.ServerRpcHandler.handleRpc(ServerRpcHandler.java:383)
+	at com.vaadin.flow.server.communication.PushHandler.lambda$new$1(PushHandler.java:209)
+	at com.vaadin.flow.server.communication.PushHandler.callWithUi(PushHandler.java:370)
+	...
 ```
 
-If you would like to run a separate test make sure you have added these parameters to VM Options of JUnit run configuration
+Checked on Vaadin 25.3.5 (the version in `pom.xml`) and on 25.4.0-alpha5
+(`-Dvaadin.version=25.4.0-alpha5`).
 
-### Live Reload (optional)
+## Headless check
 
-With live reload, you can see the results of your code changes immediately. 
-When you edit your Java code and recompile it, the application changes will be automatically reloaded and the browser is refreshed.
-This is done by leveraging [Spring Boot Developer Tools](https://docs.spring.io/spring-boot/docs/2.1.5.RELEASE/reference/html/using-boot-devtools.html). 
-To be able to see the changes in the browser tab, the page still needs to be reloaded. 
-That can also  be automated via a LiveReload browser extension. 
-One such extension for Google Chrome is [LiveReload](https://chrome.google.com/webstore/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei). 
-In Firefox, [LiveReload - Web extension](https://addons.mozilla.org/en-US/firefox/addon/livereload-web-extension/) can be used.
-You can find such similar extensions for other major browsers too.
-These extensions add an icon to your browser next to the address bar.
-To enable the extension, you should click that icon after you opened your application. 
+`check/check.mjs` opens the three URLs in Chromium with Playwright and prints the
+counter at 8 s and at 20 s:
 
-You can find more information at [Live Reload in Spring Boot Applications](https://vaadin.com/docs/flow/workflow/tutorial-spring-boot-live-reload.html) document.
+```
+node check/check.mjs http://localhost:8080/ <path-to>/node_modules/playwright-core [<chrome-executable>]
+```
 
-## Structure
+Output on 25.3.5:
 
-Vaadin web applications are full-stack and include both client-side and server-side code in the same project.
-
-| Directory                                  | Description |
-|:-------------------------------------------| :--- |
-| `src/main/frontend/`                       | Client-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.html`       | HTML template |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.ts`         | Frontend entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`main-layout.ts`   | Main layout Web Component (optional) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`views/`           | UI views Web Components (TypeScript / HTML) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`styles/`          | Styles directory (CSS) |
-| `src/main/java/<groupId>/`                 | Server-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`Application.java` | Server entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`AppShell.java`    | application-shell configuration |
-
-## Code Formatting
-
-The project includes the Spotless code formatter.
-
-To use it in IntelliJ, install the [https://plugins.jetbrains.com/plugin/22455-spotless-applier](IntelliJ plugin)
-To use it in VS Code, install the [https://marketplace.visualstudio.com/items?itemName=richardwillis.vscode-spotless-gradle ](VS Code extension)
-To use it from the command line, run `mvn spotless:apply`
-
-## Useful links
-
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorials at [vaadin.com/tutorials](https://vaadin.com/tutorials).
-- Watch training videos and get certified at [vaadin.com/learn/training](https://vaadin.com/learn/training).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/components](https://vaadin.com/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Discover Vaadin's set of CSS utility classes that enable building any UI without custom CSS in the [docs](https://vaadin.com/docs/latest/ds/foundation/utility-classes). 
-- Find a collection of solutions to common use cases in [Vaadin Cookbook](https://cookbook.vaadin.com/).
-- Find Add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Discord channel](https://discord.gg/MYFq5RTbBn).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin/platform).
+```
+(default: WEBSOCKET, one message dropped): counter at 8 s = 5, at 20 s = 5, state = connected  -> STOPPED
+?nodrop: counter at 8 s = 15, at 20 s = 39, state = connected  -> keeps going
+?transport=WEBSOCKET_XHR: counter at 8 s = 5, at 20 s = 39, state = connected  -> keeps going
+```
