@@ -1,99 +1,87 @@
-# Project Base for Vaadin and Spring Boot
+# CSP feedback from browserless tests
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+Question: if a browserless test runs with `vaadin.csp=warn` or
+`vaadin.csp=strict`, does it tell early what an application must change to
+work under a strict Content Security Policy?
 
-The best way to create your own project based on this starter is [start.vaadin.com](https://start.vaadin.com/) - you can get only the necessary parts and choose the package naming you want to use.
+Based on `v25.4` of the skeleton (Vaadin 25.4.0-alpha5, the first version with
+the `csp` setting and the string JavaScript reporter).
 
-## Running the Application
-There are two ways to run the application :  using `mvn spring-boot:run` or by running the `Application` class directly from your IDE.
+## Short answer
 
-You can use any IDE of your preference,but we suggest Eclipse or Intellij IDEA.
-Below are the configuration details to start the project using a `spring-boot:run` command. Both Eclipse and Intellij IDEA are covered.
+- **warn: yes, with a filter.** Every server-side call that sends JavaScript
+  as a string is logged with a stack trace, also in browserless tests. But most
+  warnings come from Flow itself (`UI`, `Page`) and from Vaadin components
+  (`Button`, click shortcuts), not from the application. The test helper
+  `CspViolationCollector` sorts them into APP and VAADIN.
+- **strict: no, not today.** `new UI()` already throws
+  `CspViolationException` (the `Page` constructor adds a resize listener with
+  event data), so every browserless test fails in its setup, before the test
+  code runs.
 
-#### Eclipse
-- Right click on a project folder and select `Run As` --> `Maven build..` . After that a configuration window is opened.
-- In the window set the value of the **Goals** field to `spring-boot:run` 
-- You can optionally select `Skip tests` checkbox
-- All the other settings can be left to default
+## What is in the branch
 
-Once configurations are set clicking `Run` will start the application
+- `CspView` (`/csp`): three UNSAFE call sites (`executeJs(String)` in
+  `onAttach` and in a click listener, `addEventData` and `setFilter` on a DOM
+  listener) and one SAFE call (`executeJs(TitleJs.class)`, a `@JsDefinition`).
+- `CspViolationCollector`: JUnit extension. It listens to the
+  `CspViolationReporter` logger and gives each warning an owner:
+  - `APP`: application code called the API directly. The application must
+    change.
+  - `VAADIN`: Flow or a component made the call. The report shows the
+    application line that triggered it, if there is one.
 
-#### Intellij IDEA
-- On the right side of the window, select Maven --> Plugins--> `spring-boot` --> `spring-boot:run` goal
-- Optionally, you can disable tests by clicking on a `Skip Tests mode` blue button.
+  It prints a report after each test class. With
+  `-Dcsp.failOnAppViolations=true`, a test fails when it reaches an APP call
+  site.
+- `CspViewCspTest`, `MainViewCspTest`: tests with
+  `@SpringBootTest(properties = "vaadin.csp=warn")`.
 
-Clicking on the green run button will start the application.
+## Steps
 
-After the application has started, you can view your it at http://localhost:8080/ in your browser.
+1. `./mvnw test`
 
+   All tests pass. Look for `===== CSP report for CspViewCspTest =====` in the
+   output:
 
-If you want to run the application locally in the production mode, use `package` and `java -jar target/spring-skeleton-1.0-SNAPSHOT.jar` commands instead.
-### Running Integration Tests
+   ```
+   APP  ...addEventData(ElementListenerMap.java:175)  <-  CspView.<init>(CspView.java:30)
+   APP  ...setFilter(ElementListenerMap.java:236)  <-  CspView.<init>(CspView.java:31)
+   APP  Element.executeJs(Element.java:1957)  <-  CspView.onAttach(CspView.java:39)
+   APP  Page.executeJs(Page.java:601)  <-  CspView.lambda$new$0(CspView.java:21)
+         reached by: [clickingReportsTheListenerCode()]
+   VAADIN  Page.<init>(Page.java:91)  <-  UI.<init>(UI.java:203) (...)
+   VAADIN  ...addEventData(...)  <-  ComponentEventBus.addDomTrigger(...) (triggered from MainView.<init>(MainView.java:41))
+   ...
+   ```
 
-Integration tests are implemented using [Vaadin TestBench](https://vaadin.com/testbench). The tests take a few minutes to run and are therefore included in a separate Maven profile. We recommend running tests with a production build to minimize the chance of development time toolchains affecting test stability. To run the tests using Google Chrome, execute
+   The SAFE `executeJs(TitleJs.class)` call (`CspView.java:42`) is not in the
+   report. `MainViewCspTest` has only VAADIN entries: the skeleton view itself
+   is fine, but `Button` and `addClickShortcut` are not.
 
-`mvn verify -Pit`
+2. `./mvnw test -Dtest=CspViewCspTest -Dcsp.failOnAppViolations=true`
 
-and make sure you have a valid TestBench license installed.
+   Both tests fail and list the APP call sites. This is how a project could
+   gate on its own code in CI.
 
-Profile `it` adds the following parameters to run integration tests:
-```sh
--Dwebdriver.chrome.driver=path_to_driver
--Dcom.vaadin.testbench.Parameters.runLocally=chrome
-```
+3. `./mvnw test -Dtest=MainViewTest -Dvaadin.csp=strict`
 
-If you would like to run a separate test make sure you have added these parameters to VM Options of JUnit run configuration
+   All 5 tests fail with `CspViolationException` from
+   `Page.<init>` &larr; `UI.<init>` &larr; `MockVaadin.setup`.
 
-### Live Reload (optional)
+## Limits of this feedback
 
-With live reload, you can see the results of your code changes immediately. 
-When you edit your Java code and recompile it, the application changes will be automatically reloaded and the browser is refreshed.
-This is done by leveraging [Spring Boot Developer Tools](https://docs.spring.io/spring-boot/docs/2.1.5.RELEASE/reference/html/using-boot-devtools.html). 
-To be able to see the changes in the browser tab, the page still needs to be reloaded. 
-That can also  be automated via a LiveReload browser extension. 
-One such extension for Google Chrome is [LiveReload](https://chrome.google.com/webstore/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei). 
-In Firefox, [LiveReload - Web extension](https://addons.mozilla.org/en-US/firefox/addon/livereload-web-extension/) can be used.
-You can find such similar extensions for other major browsers too.
-These extensions add an icon to your browser next to the address bar.
-To enable the extension, you should click that icon after you opened your application. 
-
-You can find more information at [Live Reload in Spring Boot Applications](https://vaadin.com/docs/flow/workflow/tutorial-spring-boot-live-reload.html) document.
-
-## Structure
-
-Vaadin web applications are full-stack and include both client-side and server-side code in the same project.
-
-| Directory                                  | Description |
-|:-------------------------------------------| :--- |
-| `src/main/frontend/`                       | Client-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.html`       | HTML template |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.ts`         | Frontend entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`main-layout.ts`   | Main layout Web Component (optional) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`views/`           | UI views Web Components (TypeScript / HTML) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`styles/`          | Styles directory (CSS) |
-| `src/main/java/<groupId>/`                 | Server-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`Application.java` | Server entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`AppShell.java`    | application-shell configuration |
-
-## Code Formatting
-
-The project includes the Spotless code formatter.
-
-To use it in IntelliJ, install the [https://plugins.jetbrains.com/plugin/22455-spotless-applier](IntelliJ plugin)
-To use it in VS Code, install the [https://marketplace.visualstudio.com/items?itemName=richardwillis.vscode-spotless-gradle ](VS Code extension)
-To use it from the command line, run `mvn spotless:apply`
-
-## Useful links
-
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorials at [vaadin.com/tutorials](https://vaadin.com/tutorials).
-- Watch training videos and get certified at [vaadin.com/learn/training](https://vaadin.com/learn/training).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/components](https://vaadin.com/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Discover Vaadin's set of CSS utility classes that enable building any UI without custom CSS in the [docs](https://vaadin.com/docs/latest/ds/foundation/utility-classes). 
-- Find a collection of solutions to common use cases in [Vaadin Cookbook](https://cookbook.vaadin.com/).
-- Find Add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Discord channel](https://discord.gg/MYFq5RTbBn).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin/platform).
+- It only sees code that the tests run. The click listener line is found only
+  by the test that clicks the button.
+- Calls without an application frame (deferred work in
+  `beforeClientResponse`, for example `ShortcutRegistration`) cannot be tied
+  to an application line.
+- It only sees the server-side string JavaScript APIs. It does not see what
+  happens in the browser: `eval` or `new Function` in npm packages or in your
+  own frontend code, inline `<script>` or event handler attributes in
+  templates, inline styles, the policy header itself. Those need a browser
+  test (TestBench) against a production build with `vaadin.csp=strict`.
+- Flow logs each call site once per `VaadinService`. Browserless tests create
+  a new service for each test, so this does not hide warnings between tests.
+- Spring Boot resets logback when it starts the test context, so the appender
+  is attached again before each test.
