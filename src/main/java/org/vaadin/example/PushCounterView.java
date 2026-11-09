@@ -33,8 +33,13 @@ import com.vaadin.flow.shared.ui.Transport;
 public class PushCounterView extends VerticalLayout
         implements BeforeEnterObserver {
 
+    // A daemon thread, so it does not keep the JVM alive after shutdown.
     private static final ScheduledExecutorService TICKER = Executors
-            .newSingleThreadScheduledExecutor();
+            .newSingleThreadScheduledExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "push-counter");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     private final Span counter = new Span("0");
     private ScheduledFuture<?> task;
