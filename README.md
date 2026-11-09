@@ -45,19 +45,3 @@ com.vaadin.flow.server.communication.ServerRpcHandler$ResynchronizationRequiredE
 Checked on Vaadin 25.3.5 (the version in `pom.xml`) and on 25.4.0-alpha5
 (`-Dvaadin.version=25.4.0-alpha5`).
 
-## Headless check
-
-`check/check.mjs` opens the three URLs in Chromium with Playwright and prints the
-counter at 8 s and at 20 s:
-
-```
-node check/check.mjs http://localhost:8080/ <path-to>/node_modules/playwright-core [<chrome-executable>]
-```
-
-Output on 25.3.5:
-
-```
-(default: WEBSOCKET, one message dropped): counter at 8 s = 5, at 20 s = 5, state = connected  -> STOPPED
-?nodrop: counter at 8 s = 15, at 20 s = 39, state = connected  -> keeps going
-?transport=WEBSOCKET_XHR: counter at 8 s = 5, at 20 s = 39, state = connected  -> keeps going
-```
