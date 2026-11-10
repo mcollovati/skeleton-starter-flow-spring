@@ -12,7 +12,7 @@ import com.vaadin.flow.router.Route;
 
 /**
  * The locator is a declared function, the new
- * setShortcutListenOnElement(JsFunction, Component) of the PR. main does not
+ * setShortcutListenOnElementLocator(JsFunction, Component) of the PR. main does not
  * have this overload: delete this file to run the app against main.
  */
 @Route("delegate")
@@ -32,7 +32,7 @@ public class DelegateView extends AbstractDelegateView {
     @Override
     protected void setLocator(Div host, String overlayId) {
         // A new function each time, for the same declared call
-        Shortcuts.setShortcutListenOnElement(
+        Shortcuts.setShortcutListenOnElementLocator(
                 JsSnippets.of(LocatorJs.class).byId(overlayId), host);
     }
 }

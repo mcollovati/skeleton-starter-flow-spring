@@ -7,9 +7,9 @@ Before the change, a shortcut sent its listener filter and its keydown
 delegate to the browser as JavaScript strings. A Content Security Policy
 without `unsafe-eval` blocks them. With the change, the shortcut calls
 declared JavaScript (`ShortcutFilterJs`, `ShortcutJs`) and sends the keys,
-modifiers and options as data. `Shortcuts.setShortcutListenOnElement` gets
-an overload that takes a declared `JsFunction` locator. The `String`
-overload is deprecated.
+modifiers and options as data. The new `Shortcuts.setShortcutListenOnElementLocator`
+takes a declared `JsFunction` locator. `setShortcutListenOnElement(String, ..)`
+is deprecated.
 
 The views use only Flow HTML components (no Vaadin components), so the CSP
 log shows only the shortcut call sites. Popovers open with
@@ -56,8 +56,9 @@ Each view has a log of the shortcuts that fired on the server, as
 | `/delegate` | Keydown delegate, declared locator | Overlay input: Alt+D logs `delegate-a` and `delegate-b` once each (one delegate for the locator set twice), Alt+E logs `nested-e`. Nested popover input: only Alt+E logs. Page input: nothing |
 | `/string-locator` | Keydown delegate, deprecated `String` locator | Same as `/delegate` in warn mode. Fails in strict mode, also with the branch |
 
-`/delegate` calls the new overload, which `main` does not have. To run the
-app against `main`, delete `DelegateView.java` and its link in `MainView`.
+`/delegate` calls the new `setShortcutListenOnElementLocator`, which `main`
+does not have. To run the app against `main`, delete `DelegateView.java` and
+its link in `MainView`.
 
 ## Results (2026-11-10)
 
@@ -86,12 +87,13 @@ Each test passes when the problem is fixed. `DuplicateDelegateTest` and
 `DelegateOptionsTest` use the new overload, so to run the others against
 `main`, set them aside together with `DelegateView` (see above).
 
-Checked 2026-11-10 against the branch (a530a7a8f9) and `main` (74bfef5b98):
+Checked 2026-11-10 against the branch at a530a7a8f9, the branch at
+8d130221d2 (after the review) and `main` (74bfef5b98):
 
-| Test / view | Finding | Branch | `main` |
-|---|---|---|---|
-| `FireShortcutTest` | browserless-test `fireShortcut` reads `ShortcutRegistration.generateEventKeyFilter` / `generateEventModifierFilter` by reflection and matches the filter as a string | `ExceptionInInitializerError` caused by `NoSuchMethodException` | passes |
-| `NullLocatorCompileTest` | `setShortcutListenOnElement(null, component)` is ambiguous with the new `JsFunction` overload | javac: "reference to setShortcutListenOnElement is ambiguous" | compiles |
-| `DuplicateDelegateTest` | a variadic declared locator, or a `JsFunction.of` locator, set again in a later round trip registers a second delegate | 2 delegates (keydown relayed twice, shortcut fires twice); a single-`String` declared locator gets 1 | n/a (no overload) |
-| `DelegateOptionsTest` | changing `setBrowserDefaultAllowed` on an active shortcut does not update the delegate | no new delegate; the browser keeps preventing the default | same bug (not run, code unchanged in behavior) |
-| `/many-shortcuts` | every keydown evaluates every shortcut filter snippet again | 0.165 ms per non-matching keydown with 300 shortcuts | 0.06 ms. Slower, but not a real cost |
+| Test / view | Finding | a530a7a8f9 | 8d130221d2 | `main` |
+|---|---|---|---|---|
+| `FireShortcutTest` | browserless-test `fireShortcut` reads `ShortcutRegistration.generateEventKeyFilter` / `generateEventModifierFilter` by reflection and matches the filter as a string | `ExceptionInInitializerError` caused by `NoSuchMethodException` | same (to fix in browserless-test after the merge) | passes |
+| `NullLocatorCompileTest` | `setShortcutListenOnElement(null, component)` is ambiguous with the new `JsFunction` overload | javac: "reference to setShortcutListenOnElement is ambiguous" | passes (b1337e0ec8 names it `setShortcutListenOnElementLocator`) | compiles |
+| `DuplicateDelegateTest` | a variadic declared locator, or a `JsFunction.of` locator, set again in a later round trip registers a second delegate | 2 delegates (keydown relayed twice, shortcut fires twice); a single-`String` declared locator gets 1 | passes (`JsFunction` value equality) | n/a (no overload) |
+| `DelegateOptionsTest` | changing `setBrowserDefaultAllowed` on an active shortcut does not update the delegate | no new delegate; the browser keeps preventing the default | same | same bug (not run, code unchanged in behavior) |
+| `/many-shortcuts` | every keydown evaluates every shortcut filter snippet again | 0.165 ms per non-matching keydown with 300 shortcuts | not measured | 0.06 ms. Slower, but not a real cost |

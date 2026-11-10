@@ -77,7 +77,7 @@ class DuplicateDelegateTest extends SpringBrowserlessTest {
         // The second shortcut is added in a later round trip, e.g. when a
         // dialog adds a shortcut on a button click.
         for (int i = 0; i < 2; i++) {
-            Shortcuts.setShortcutListenOnElement(locator.get(), host);
+            Shortcuts.setShortcutListenOnElementLocator(locator.get(), host);
             Shortcuts.addShortcutListener(host, () -> {
             }, Key.KEY_D, KeyModifier.ALT).listenOn(host);
             ui.getInternals().getStateTree()

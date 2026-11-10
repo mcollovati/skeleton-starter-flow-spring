@@ -47,7 +47,7 @@ class DelegateOptionsTest extends SpringBrowserlessTest {
         UI ui = UI.getCurrent();
         Div host = new Div();
         ui.add(host);
-        Shortcuts.setShortcutListenOnElement(
+        Shortcuts.setShortcutListenOnElementLocator(
                 JsSnippets.of(LocatorJs.class).byId("overlay"), host);
         ShortcutRegistration shortcut = Shortcuts.addShortcutListener(host,
                 () -> {

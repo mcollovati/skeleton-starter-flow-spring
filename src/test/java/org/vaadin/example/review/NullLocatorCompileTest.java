@@ -16,13 +16,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Finding 2: the new setShortcutListenOnElement(JsFunction, Component)
- * overload makes a call with a null literal ambiguous. Code that clears the
- * locator with setShortcutListenOnElement(null, component) compiles against
- * main and no longer compiles against the branch.
+ * Finding 2: a setShortcutListenOnElement(JsFunction, Component) overload
+ * makes a call with a null literal ambiguous. Code that clears the locator
+ * with setShortcutListenOnElement(null, component) compiles against main.
  * <p>
- * main: passes. Branch: fails, javac reports "reference to
- * setShortcutListenOnElement is ambiguous".
+ * main: passes. Branch at a530a7a8f9: fails, javac reports "reference to
+ * setShortcutListenOnElement is ambiguous". Fixed in b1337e0ec8, which names
+ * the JsFunction method setShortcutListenOnElementLocator.
  */
 class NullLocatorCompileTest {
 
