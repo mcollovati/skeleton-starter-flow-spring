@@ -1,27 +1,23 @@
-/* Example: CSS class name to center align the content . */
-.centered-content {
-  margin: 0 auto;
-  max-width: 250px;
-}
-
-/* Example: the style is applied only to the textfields which have the `bordered` class name. */
-vaadin-text-field.bordered::part(input-field) {
-  box-shadow: inset 0 0 0 1px var(--lumo-contrast-30pct);
-  background-color: var(--lumo-base-color);
-}
-
-
-
-/* Element.flashClass("flash"): the class is removed when the animation ends */
-.box {
-  width: 120px;
-  padding: 1em;
+.case {
   border: 1px solid var(--lumo-contrast-30pct);
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
+  max-width: 50em;
 }
-.box.flash {
-  animation: flash-box 1s;
+
+.case h4 {
+  margin: 0.2em 0;
 }
-@keyframes flash-box {
-  from { background: orange; }
-  to { background: orange; }
+
+.log {
+  font-family: monospace;
+  border: 1px dashed var(--lumo-contrast-50pct);
+  padding: 0.5em;
+  min-height: 3em;
+  max-width: 50em;
+}
+
+[popover] {
+  border: 2px solid orange;
+  padding: 1em;
 }
