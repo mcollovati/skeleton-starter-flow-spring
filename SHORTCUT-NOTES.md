@@ -57,7 +57,7 @@ Each view has a log of the shortcuts that fired on the server, as
 | `/string-locator` | Keydown delegate, deprecated `String` locator | Same as `/delegate` in warn mode. Fails in strict mode, also with the branch |
 
 `/delegate` calls the new overload, which `main` does not have. To run the
-app against `main`, delete `DelegateView.java` first.
+app against `main`, delete `DelegateView.java` and its link in `MainView`.
 
 ## Results (2026-11-10)
 
@@ -72,3 +72,26 @@ headless Chrome.
 
 Side note: the Javadoc of `CspMode.STRICT` still says that the event filters
 of keyboard shortcuts need `eval`.
+
+## Review findings (reproducers)
+
+Tests in `src/test/java/org/vaadin/example/review`. Run them against the
+installed Flow branch with:
+
+```
+./mvnw test -Dtest='org.vaadin.example.review.*Test'
+```
+
+Each test passes when the problem is fixed. `DuplicateDelegateTest` and
+`DelegateOptionsTest` use the new overload, so to run the others against
+`main`, set them aside together with `DelegateView` (see above).
+
+Checked 2026-11-10 against the branch (a530a7a8f9) and `main` (74bfef5b98):
+
+| Test / view | Finding | Branch | `main` |
+|---|---|---|---|
+| `FireShortcutTest` | browserless-test `fireShortcut` reads `ShortcutRegistration.generateEventKeyFilter` / `generateEventModifierFilter` by reflection and matches the filter as a string | `ExceptionInInitializerError` caused by `NoSuchMethodException` | passes |
+| `NullLocatorCompileTest` | `setShortcutListenOnElement(null, component)` is ambiguous with the new `JsFunction` overload | javac: "reference to setShortcutListenOnElement is ambiguous" | compiles |
+| `DuplicateDelegateTest` | a variadic declared locator, or a `JsFunction.of` locator, set again in a later round trip registers a second delegate | 2 delegates (keydown relayed twice, shortcut fires twice); a single-`String` declared locator gets 1 | n/a (no overload) |
+| `DelegateOptionsTest` | changing `setBrowserDefaultAllowed` on an active shortcut does not update the delegate | no new delegate; the browser keeps preventing the default | same bug (not run, code unchanged in behavior) |
+| `/many-shortcuts` | every keydown evaluates every shortcut filter snippet again | 0.165 ms per non-matching keydown with 300 shortcuts | 0.06 ms. Slower, but not a real cost |
