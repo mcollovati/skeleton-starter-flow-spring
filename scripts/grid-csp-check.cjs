@@ -68,8 +68,9 @@ const check = (name, ok, detail = '') => results.push(`${ok ? 'PASS' : 'FAIL'} $
   await page.locator('vaadin-grid-cell-content', { hasText: /^Linus$/ }).click();
   check('item details (ComponentRenderer)', await hasCell('Details of Linus'));
 
-  // Replacing the details renderer unsets the previous one on the client. The
-  // server closes the open details when the old renderer is removed, so open a row again.
+  // Replacing the details renderer unsets the previous one on the client. Details
+  // that are already open stay empty, because Grid does not refresh their data for
+  // the new renderer (existing bug, also without the CSP changes), so open another row.
   await page.locator("#replace-details").click();
   await page.waitForTimeout(500);
   await page.locator("#grid > vaadin-grid-cell-content", { hasText: /^Ada$/ }).click();

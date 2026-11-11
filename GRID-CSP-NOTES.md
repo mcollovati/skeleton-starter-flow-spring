@@ -33,7 +33,10 @@ remote ones.
   `EditorJs`, `TreeGridConnectorJs`, `LitRendererJs` and the declared templates
   in the browser.
 - Replacing the item details renderer, which unsets the old renderer on the
-  client. The server closes the open details when the old renderer is removed.
+  client. The check opens another row to see the new renderer: details that
+  are already open stay empty, because `DetailsManager.setRenderer` in Grid does
+  not refresh the data of open items for the new renderer. This is an existing
+  bug, reproduced without the CSP changes.
 - A button that adds a grid with a string template. Strict mode refuses it on
   the server with `CspViolationException`.
 
