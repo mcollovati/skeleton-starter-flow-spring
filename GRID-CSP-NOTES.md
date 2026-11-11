@@ -43,17 +43,27 @@ remote ones.
 ## How to run
 
 ```
-mvn clean package -DskipTests -o
-java -jar target/spring-skeleton-1.0-SNAPSHOT.jar --vaadin.launch-browser=false
-# in another shell; PLAYWRIGHT_CORE points to an installed playwright-core
-PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core node scripts/grid-csp-check.cjs
+mvn -o -Pit clean verify
 ```
 
-The script uses `/usr/bin/google-chrome` and saves `target/grid-csp.png`.
+The `it` profile builds the production bundle, starts the application on port
+8080 and runs `GridCspIT`, a Playwright test with one method per check. It uses
+the installed Chrome (Playwright channel `chrome`), so no browser is
+downloaded. After each test it asserts that the page reported no CSP violation
+and no console error.
+
+To run the test against an application that is already running, for example
+from `java -jar`:
+
+```
+mvn -o test-compile failsafe:integration-test failsafe:verify -Dit.test=GridCspIT
+```
+
+Set `-Dit.baseUrl=...` for another address than `http://localhost:8080`.
 
 ## Result
 
-All 31 checks pass (2026-11-11): the strict header, every column renders, the
+All 17 tests pass (2026-11-11): the strict header, every column renders, the
 functions reach the server, both hierarchy columns expand, every Grid feature
 above works, the string template is refused, and the browser reports no CSP
 violation and no console error.
