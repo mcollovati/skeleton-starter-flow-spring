@@ -12,7 +12,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
-import com.vaadin.flow.data.renderer.JsLitItemTemplate;
+import com.vaadin.flow.data.renderer.CompiledLitTemplate;
 import com.vaadin.flow.data.renderer.LitRenderer;
 import com.vaadin.flow.data.renderer.LocalDateRenderer;
 import com.vaadin.flow.data.renderer.NativeButtonRenderer;
@@ -52,7 +52,7 @@ public class GridCspView extends VerticalLayout {
                 return html`<span class="status" theme="badge"
                     @click=${functions.select}>${$0}: ${item.status}</span>`;
                 """)
-        JsLitItemTemplate statusBadge(String label);
+        CompiledLitTemplate statusBadge(String label);
     }
 
     private static final List<Person> PEOPLE = List.of(

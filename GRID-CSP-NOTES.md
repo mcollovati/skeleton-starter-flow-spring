@@ -10,7 +10,7 @@ Content Security Policy: `script-src 'nonce-…' 'strict-dynamic'`, without
   installed as 25.4-SNAPSHOT: `flow-server`, `flow-build-tools`,
   `flow-maven-plugin`.
 - flow-components branch `prototype/grid-lit-template-csp` (declared Lit
-  templates, `LitRenderer.of(JsLitItemTemplate)`), installed as 25.4-SNAPSHOT:
+  templates, `LitRenderer.of(CompiledLitTemplate)`), installed as 25.4-SNAPSHOT:
   `vaadin-renderer-flow`, `vaadin-grid-flow`.
 
 Build offline (`-o`), so Maven does not replace the local snapshots with
@@ -22,7 +22,7 @@ remote ones.
   `LocalDateRenderer`, `NativeButtonRenderer` (click reaches the server), item
   details with a `ComponentRenderer`.
 - An application template, `PersonTemplates.statusBadge(String)`, declared as
-  a `JsLitItemTemplate` with a capture (`$0`), a property and a function
+  a `CompiledLitTemplate` with a capture (`$0`), a property and a function
   (`functions.select`).
 - TreeGrid: `addHierarchyColumn` and `addComponentHierarchyColumn`, both
   expanding.
