@@ -26,6 +26,14 @@ remote ones.
   (`functions.select`).
 - TreeGrid: `addHierarchyColumn` and `addComponentHierarchyColumn`, both
   expanding.
+- A features grid: header component, hidden header component, footer text and
+  component, a hidden column, a tooltip generator, the editor, sorting from the
+  header and from the server, `setPageSize`, `scrollToEnd`. Together with the
+  grids above, this runs every method of `GridConnectorJs`, `GridJs`,
+  `EditorJs`, `TreeGridConnectorJs`, `LitRendererJs` and the declared templates
+  in the browser.
+- Replacing the item details renderer, which unsets the old renderer on the
+  client. The server closes the open details when the old renderer is removed.
 - A button that adds a grid with a string template. Strict mode refuses it on
   the server with `CspViolationException`.
 
@@ -40,8 +48,12 @@ PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core node scripts/grid-csp-chec
 
 The script uses `/usr/bin/google-chrome` and saves `target/grid-csp.png`.
 
-## Result (2026-11-10)
+## Result
 
-All 18 checks pass: the strict header, every column renders, the functions
-reach the server, both hierarchy columns expand, the string template is
-refused, and the browser reports no CSP violation and no console error.
+All 31 checks pass (2026-11-11): the strict header, every column renders, the
+functions reach the server, both hierarchy columns expand, every Grid feature
+above works, the string template is refused, and the browser reports no CSP
+violation and no console error.
+
+Not covered: `GridContextMenu` (context-menu module not migrated yet) and Grid
+Pro.
