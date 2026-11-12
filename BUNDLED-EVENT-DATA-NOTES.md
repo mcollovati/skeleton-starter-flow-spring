@@ -55,7 +55,9 @@ Set `-Dit.baseUrl=...` for another address than `http://localhost:8080`.
 
 ## Result
 
-Production mode (2026-11-12, PR head 223bc7657a): all 9 tests pass.
+Production mode (2026-11-12, PR head 72770395b0): all 9 tests pass. They also
+passed on the earlier head 223bc7657a, before the PR changed the client
+binding, the event scan (`DomEventInfo`) and the dev loop restart.
 
 Development mode (`mvn -o clean spring-boot:run`, development bundle): the 8
 browser tests ran against it. 7 pass. `strictCspHeader_noUnsafeEval` fails
@@ -70,8 +72,8 @@ backslash and the line break of A3 correctly.
 
 - The generated file also has functions for event classes of flow-components,
   not only flow-dnd: `MapClickEvent` and `MapClusterClickEvent` (Map) and
-  `SplitLayout.SplitterDragEndEvent`. The PR description names only flow-dnd as
-  changing the bundle content.
+  `SplitLayout.SplitterDragEndEvent`. This is expected: the default bundles of
+  the platform are built with all components, so they get these functions too.
 - A5 is still refused under strict mode: an expression that maps to an element
   or component has no CSP-safe form yet, also not through
   `addEventDataElement(String)`.
