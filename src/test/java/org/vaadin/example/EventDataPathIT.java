@@ -164,9 +164,12 @@ class EventDataPathIT {
 
     // B2, B3
     @Test
-    void beanWithInvalidPath_refused_addsNothing() {
-        assertOutcome("bean-top-level-type", IAE);
-        assertOutcome("bean-non-ascii-detail", IAE);
+    void beanWithNonPathProperty_compiled_refusedByStrictMode() {
+        // Since 1992c6915a and da29a7ba02 the bean methods do not check their
+        // paths: a non-path is compiled, so strict mode refuses it, before
+        // anything is added
+        assertOutcome("bean-top-level-type", CSP);
+        assertOutcome("bean-non-ascii-detail", CSP);
         page.locator("#bean-probe").click();
         assertThat(result("bean-probe"))
                 .hasText("{\"element.id\":\"bean-probe\"}");

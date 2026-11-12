@@ -26,7 +26,7 @@ import com.vaadin.flow.router.Route;
 /**
  * Cases for vaadin/flow#26999: {@code addEventDataPath(String)} and
  * {@code addEventDataElementPath(String)}, the deprecated string methods and
- * the bean-based methods that now check their paths.
+ * the bean-based methods.
  * <p>
  * The application runs with {@code vaadin.csp=strict}, so the browser must not
  * compile any event data, and the server refuses event data that the browser
@@ -213,18 +213,18 @@ public class EventDataPathView extends Div {
         }).addEventData(ValidBean.class);
         add(new Div(button, result));
 
-        add(new H3("B2/B3: invalid beans add nothing"));
-        NativeButton probe = new NativeButton("Click after invalid beans");
+        add(new H3("B2/B3: beans with a non-path property add nothing"));
+        NativeButton probe = new NativeButton("Click after refused beans");
         probe.setId("bean-probe");
         Span probeResult = result("bean-probe");
         DomListenerRegistration registration = probe.getElement()
                 .addEventListener("click",
                         e -> probeResult.setText(e.getEventData().toString()))
                 .addEventDataPath("element.id");
-        // B2: event.type and event.detail are valid, type is not
+        // B2: event.type and event.detail are paths, type is compiled
         setupRow("bean-top-level-type", "addEventData(TopLevelTypeBean.class)",
                 () -> registration.addEventData(TopLevelTypeBean.class));
-        // B3: event.detail.width is valid, event.detail.größe is not
+        // B3: event.detail.width is a path, event.detail.größe is compiled
         setupRow("bean-non-ascii-detail",
                 "addEventDetail(NonAsciiDetail.class)",
                 () -> registration.addEventDetail(NonAsciiDetail.class));
