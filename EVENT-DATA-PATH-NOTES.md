@@ -96,8 +96,8 @@ Set `-Dit.baseUrl=...` for another address than `http://localhost:8080`.
 
 ## Result
 
-All 21 tests pass (2026-11-12, local merge of #26999 at 1992c6915a and #27001
-at 7c6bf7690a): 16 in `EventDataPathIT` and 5 in `EventDataElementIT`. Every
+All 21 tests pass (2026-11-12, local merge of #26999 at c5199e0ae7 and #27001
+at b467598653): 16 in `EventDataPathIT` and 5 in `EventDataElementIT`. Every
 case in both tables gives the expected result, and the browser reports no CSP
 violation and no console error. X5 sends `42` to the client lookup, which
 fails quietly (a debug message only) and gives no element.
