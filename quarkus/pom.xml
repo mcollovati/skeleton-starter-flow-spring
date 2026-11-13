@@ -8,6 +8,7 @@
          itself (embedded plugin), so no Vaadin Maven plugin is needed. -->
     <groupId>com.example</groupId>
     <artifactId>quarkus-native-snippet-type</artifactId>
+    <packaging>quarkus</packaging>
     <name>Native image: JsSnippet sub-interface proxy (Quarkus)</name>
     <version>1.0-SNAPSHOT</version>
 
