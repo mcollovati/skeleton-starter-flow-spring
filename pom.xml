@@ -90,6 +90,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- Installed from addon/ first, see README.md. The application
+             uses none of its classes. -->
+        <dependency>
+            <groupId>org.vaadin.example</groupId>
+            <artifactId>repro-addon</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-dev</artifactId>

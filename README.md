@@ -1,3 +1,49 @@
+# Reproducer: an unused `@JsDefinition` in an add-on forces a production bundle build
+
+With `optimizeBundle` (the default of `build-frontend`), the production build
+only takes a `@JsModule` from classes that the application reaches. The
+JavaScript of `@JsDefinition` interfaces is collected from the whole classpath.
+So an add-on with a definition that the application never uses still ends up
+in the bundle, and the application can no longer use the pre-built production
+bundle.
+
+The application here is the unchanged skeleton (Vaadin 25.4.0-alpha6) plus a
+dependency on the add-on in `addon/`. It uses no class of the add-on.
+
+## Steps
+
+1. Install the add-on with only an unused `@JsModule` component, then build
+   the application:
+
+   ```
+   mvn -f addon/pom.xml clean install
+   mvn clean package -DskipTests
+   ```
+
+   The log says `A production mode bundle build is not needed`: the pre-built
+   bundle is used.
+
+2. Install the add-on again, now with an unused class that declares
+   `@JsDefinition` (`addon/src/definition/java`, added by the profile), then
+   build the application again:
+
+   ```
+   mvn -f addon/pom.xml clean install -Pwith-definition
+   mvn clean package -DskipTests
+   ```
+
+   The log says `Detected JavaScript declared by the JavaScript definitions
+   that the bundle does not carry` and `A production mode bundle build is
+   needed`. The build compiles an application bundle, and the definition of
+   `UnusedDefinitionComponent.GreetJs` is in it
+   (`target/classes/META-INF/VAADIN/webapp/VAADIN/build/generated-*.js`),
+   while the unused `@JsModule` of step 1 is not.
+
+Step 2 writes the compiled bundle to `src/main/bundles/prod.bundle`. Delete that
+folder before you repeat step 1.
+
+---
+
 # Project Base for Vaadin and Spring Boot
 
 This project can be used as a starting point to create your own Vaadin application with Spring Boot.
