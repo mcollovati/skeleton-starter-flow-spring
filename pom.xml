@@ -6,13 +6,16 @@
     <!-- Vaadin project from https://github.com/vaadin/skeleton-starter-flow-spring -->
     <groupId>com.example</groupId>
     <artifactId>spring-skeleton</artifactId>
-    <name>Project base for Spring Boot and Vaadin Flow</name>
+    <name>Native image: JsSnippet sub-interface proxy</name>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
         <java.version>21</java.version>
-        <vaadin.version>25.4.0-alpha6</vaadin.version>
+        <!-- JsSnippet sub-interfaces (vaadin/flow#26960) are only in the
+             snapshot. Only Flow is used, no platform components, so the
+             native image builds faster. -->
+        <flow.version>25.4-SNAPSHOT</flow.version>
     </properties>
 
     <parent>
@@ -35,13 +38,6 @@
             <url>https://maven.vaadin.com/vaadin-prereleases</url>
             <snapshots>
                 <enabled>true</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>Vaadin Directory</id>
-            <url>https://maven.vaadin.com/vaadin-addons</url>
-            <snapshots>
-                <enabled>false</enabled>
             </snapshots>
         </repository>
     </repositories>
@@ -68,8 +64,8 @@
         <dependencies>
             <dependency>
                 <groupId>com.vaadin</groupId>
-                <artifactId>vaadin-bom</artifactId>
-                <version>${vaadin.version}</version>
+                <artifactId>flow-bom</artifactId>
+                <version>${flow.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -79,36 +75,15 @@
     <dependencies>
         <dependency>
             <groupId>com.vaadin</groupId>
-            <!-- Replace artifactId with vaadin-core to use only free components -->
-            <artifactId>vaadin</artifactId>
+            <artifactId>vaadin-spring</artifactId>
         </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-spring-boot-starter</artifactId>
+            <artifactId>flow-html-components</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-dev</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.vaadin</groupId>
-            <artifactId>browserless-test-spring</artifactId>
-            <scope>test</scope>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
     </dependencies>
 
@@ -119,10 +94,12 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- Always a production bundle: the build generates the bundled
+                 functions of the JavaScript definitions -->
             <plugin>
                 <groupId>com.vaadin</groupId>
-                <artifactId>vaadin-maven-plugin</artifactId>
-                <version>${vaadin.version}</version>
+                <artifactId>flow-maven-plugin</artifactId>
+                <version>${flow.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -135,51 +112,28 @@
     </build>
 
     <profiles>
+        <!-- Adds to the native profile of the Spring Boot parent -->
         <profile>
-            <id>it</id>
+            <id>native</id>
+            <properties>
+                <!-- The reachability metadata repository needs a recent
+                     GraalVM. Set to false to build with an older one, such as
+                     Mandrel 25.0.2. -->
+                <native.metadataRepository.enabled>true</native.metadataRepository.enabled>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.springframework.boot</groupId>
-                        <artifactId>spring-boot-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>start-spring-boot</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>start</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>stop-spring-boot</id>
-                                <phase>post-integration-test</phase>
-                                <goals>
-                                    <goal>stop</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                    <!-- Runs the integration tests (*IT) after the server is started -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
                         <configuration>
-                            <trimStackTrace>false</trimStackTrace>
-                            <enableAssertions>true</enableAssertions>
+                            <metadataRepository>
+                                <enabled>${native.metadataRepository.enabled}</enabled>
+                            </metadataRepository>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
         </profile>
-
     </profiles>
 </project>
