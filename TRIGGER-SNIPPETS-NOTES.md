@@ -51,7 +51,7 @@ To use another port, add
 | N2 | `OpenInNewTabAction` with a `javascript:` URL read from an input | no popup |
 | F1 | `Fullscreen.onClick(button).enter(component, ...)` | `entered`, and the fullscreen element contains the component |
 | S1 | `WebShare.onClick(button).share(title + url, ...)` | `shared`, and `navigator.share` got `{title, url}` |
-| Z1 | `SizeTrigger` with two `SetPropertyAction`s | the size of the panel, and the new width after a resize |
+| Z1 | `SizeTrigger` with two `SetPropertyAction`s on a resizable panel | the size of the panel, and the new width after a resize |
 | T1 | `UI.triggerAfter(300 ms, ...)` (timeout installer) | `fired` |
 | E1 | `DomEventTrigger` on `input` with `SetSignalAction` from a `PropertyInput` | the typed text |
 | E2 | `DoubleClickTrigger` with a client-only `SetPropertyAction` | `double` |
@@ -63,6 +63,12 @@ To use another port, add
 | I3 | `addJsInitializer(String)` | `CspViolationException` |
 | I4 | `addJsInitializer((JsFunction) null)` | `NullPointerException` |
 | I5 | `JsFunction.of(String)` | `CspViolationException` |
+
+## Testing by hand
+
+Each view says how to test every case and what to expect, under the case
+title. Keep the browser console open: no case may log a CSP violation or an
+error.
 
 ## What the cases cannot show
 

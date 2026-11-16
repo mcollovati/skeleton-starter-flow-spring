@@ -6,8 +6,11 @@ import com.vaadin.flow.component.clipboard.Clipboard;
 import com.vaadin.flow.component.clipboard.PasteEvent;
 import com.vaadin.flow.component.clipboard.PasteFileHandler;
 import com.vaadin.flow.component.clipboard.PasteOptions;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Input;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.router.Route;
 
@@ -58,8 +61,36 @@ public class PasteSnippetsView extends Div {
                                 + file.fileName()))
                         .build());
 
-        add(target, p1Result, p2Target, p2Input, p2Result, p3Target,
-                p3Result);
+        add(new Paragraph("Run in production mode with vaadin.csp=strict and keep "
+                + "the browser console open. No case may log a Content "
+                + "Security Policy violation or an error."));
+        section("P1 paste text and HTML",
+                "Copy some bold text from a web page, click the P1 box "
+                        + "and paste with Ctrl+V. Expected: text=<the text>;"
+                        + "html=<its HTML>. Plain text from an editor gives "
+                        + "html=null.",
+                target, p1Result);
+        section("P2 a paste in an editable field is skipped",
+                "Copy some text. Paste it in the field: nothing is "
+                        + "reported. Click the P2 box and paste. Expected: "
+                        + "target=p2-target;text=<the text>.",
+                p2Target, p2Input, p2Result);
+        section("P3 paste a file",
+                "Copy an image (right-click an image in a web page, Copy "
+                        + "image), click the P3 box and paste. Expected: "
+                        + "files=1;last=image.png. A file copied in a file "
+                        + "manager may only paste as text on Linux.",
+                p3Target, p3Result);
+    }
+
+    private void section(String title, String instructions,
+            Component... content) {
+        Div row = new Div(new H3(title));
+        Paragraph how = new Paragraph(instructions);
+        how.getStyle().set("margin", "0 0 0.5em").set("color", "gray");
+        row.add(how);
+        row.add(content);
+        add(row);
     }
 
     private static String describe(PasteEvent event) {

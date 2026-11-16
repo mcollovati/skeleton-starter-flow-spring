@@ -13,6 +13,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Input;
 import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.newtab.OpenInNewTab;
 import com.vaadin.flow.component.trigger.internal.ClickTrigger;
 import com.vaadin.flow.component.trigger.internal.DomEventTrigger;
@@ -45,6 +46,9 @@ public class TriggerSnippetsView extends Div {
 
     public TriggerSnippetsView() {
         setId("trigger-snippets");
+        add(new Paragraph("Run in production mode with vaadin.csp=strict and keep "
+                + "the browser console open. No case may log a Content "
+                + "Security Policy violation or an error."));
 
         // W1: Clipboard.onClick(...).writeText(literal)
         NativeButton w1 = button("w1");
@@ -52,7 +56,10 @@ public class TriggerSnippetsView extends Div {
         Clipboard.onClick(w1).writeText(COPY_TEXT,
                 text -> w1Result.setText("copied=" + text),
                 error -> w1Result.setText("error=" + error.name()));
-        row("W1 write a literal to the clipboard", w1, w1Result);
+        row("W1 write a literal to the clipboard",
+                "Click W1. Expected: copied=copied \"text\". Paste "
+                        + "somewhere to see that the clipboard has it.",
+                w1, w1Result);
 
         // W2: Clipboard.onClick(...).writeText(input) reads the value in the
         // browser
@@ -63,7 +70,10 @@ public class TriggerSnippetsView extends Div {
         Clipboard.onClick(w2).writeText(w2Source,
                 text -> w2Result.setText("copied=" + text),
                 error -> w2Result.setText("error=" + error.name()));
-        row("W2 write an input value to the clipboard", w2Source, w2,
+        row("W2 write an input value to the clipboard",
+                "Type some text in the field and click W2. Expected: "
+                        + "copied=<your text>, and the clipboard has it.",
+                w2Source, w2,
                 w2Result);
 
         // R1: Clipboard.onClick(...).readText
@@ -71,12 +81,19 @@ public class TriggerSnippetsView extends Div {
         Div r1Result = result("r1");
         Clipboard.onClick(r1).readText(text -> r1Result.setText("read=" + text),
                 error -> r1Result.setText("error=" + error.name()));
-        row("R1 read text from the clipboard", r1, r1Result);
+        row("R1 read text from the clipboard",
+                "Copy some text, then click R1 and allow the clipboard "
+                        + "access if the browser asks. Expected: "
+                        + "read=<the copied text>.",
+                r1, r1Result);
 
         // D1: Download.onClick with a URL and a suggested file name
         NativeButton d1 = button("d1");
         Download.onClick(d1, "/sample.txt", DOWNLOAD_NAME);
-        row("D1 download a URL with a file name", d1);
+        row("D1 download a URL with a file name",
+                "Click D1. Expected: a download named report 'Q1'.txt "
+                        + "with the content of sample.txt.",
+                d1);
 
         // D2: Download.onClick with a DownloadHandler
         NativeButton d2 = button("d2");
@@ -85,12 +102,16 @@ public class TriggerSnippetsView extends Div {
                 DownloadHandler.fromInputStream(event -> new DownloadResponse(
                         new ByteArrayInputStream(body), "handler.txt",
                         "text/plain", body.length)));
-        row("D2 download from a DownloadHandler", d2);
+        row("D2 download from a DownloadHandler",
+                "Click D2. Expected: a download named handler.txt that "
+                        + "contains \"" + HANDLER_BODY + "\".",
+                d2);
 
         // N1: OpenInNewTab.onClick with a URL
         NativeButton n1 = button("n1");
         OpenInNewTab.onClick(n1, "/sample.txt");
-        row("N1 open a URL in a new tab", n1);
+        row("N1 open a URL in a new tab",
+                "Click N1. Expected: sample.txt opens in a new tab.", n1);
 
         // N2: a javascript: URL read from an input is not opened
         Input n2Source = new Input();
@@ -99,7 +120,10 @@ public class TriggerSnippetsView extends Div {
         NativeButton n2 = button("n2");
         new ClickTrigger(n2).triggers(new OpenInNewTabAction(
                 new PropertyInput<>(n2Source, "value", String.class)));
-        row("N2 a javascript: URL is not opened", n2Source, n2);
+        row("N2 a javascript: URL is not opened",
+                "Click N2. Expected: no new tab opens, and the page "
+                        + "title does not change to 'opened'.",
+                n2Source, n2);
 
         // F1: Fullscreen.onClick(...).enter(component)
         Div panel = new Div("fullscreen panel");
@@ -108,7 +132,10 @@ public class TriggerSnippetsView extends Div {
         Div f1Result = result("f1");
         Fullscreen.onClick(f1).enter(panel, () -> f1Result.setText("entered"),
                 error -> f1Result.setText("error=" + error.name()));
-        row("F1 request fullscreen for a component", panel, f1, f1Result);
+        row("F1 request fullscreen for a component",
+                "Click F1. Expected: the panel fills the screen. Press "
+                        + "Esc to leave: the result shows entered.",
+                panel, f1, f1Result);
 
         // S1: WebShare.onClick(...).share(content)
         NativeButton s1 = button("s1");
@@ -117,13 +144,19 @@ public class TriggerSnippetsView extends Div {
                 ShareContent.create().title("Title").url("/sample.txt"),
                 () -> s1Result.setText("shared"),
                 error -> s1Result.setText("error=" + error.name()));
-        row("S1 share a title and a URL", s1, s1Result);
+        row("S1 share a title and a URL",
+                "Click S1. Where the browser can share (Windows, macOS, "
+                        + "Android), a share sheet opens: pick a target for "
+                        + "shared, or close it for error=AbortError. Chrome on "
+                        + "Linux cannot share: expected error=TypeError.",
+                s1, s1Result);
 
         // Z1: SizeTrigger writes the size of a panel on the client
         Div sized = new Div("resizable panel");
         sized.setId("z1-panel");
         sized.getStyle().set("width", "120px").set("height", "60px")
-                .set("background", "lightblue");
+                .set("background", "lightblue").set("resize", "both")
+                .set("overflow", "auto");
         Div width = result("z1-width");
         Div height = result("z1-height");
         new SizeTrigger(sized).triggers(
@@ -131,7 +164,10 @@ public class TriggerSnippetsView extends Div {
                         SizeTrigger.EventData.width),
                 new SetPropertyAction<>(height, "textContent",
                         SizeTrigger.EventData.height));
-        row("Z1 size trigger", sized, width, height);
+        row("Z1 size trigger",
+                "Expected on load: 120 and 60. Drag the bottom right "
+                        + "corner of the panel: both numbers follow its size.",
+                sized, width, height);
 
         // T1: UI.triggerAfter uses the timeout installer
         NativeButton t1 = button("t1");
@@ -140,7 +176,10 @@ public class TriggerSnippetsView extends Div {
         t1.addClickListener(event -> UI.getCurrent()
                 .triggerAfter(Duration.ofMillis(300),
                         () -> t1Result.setText("fired")));
-        row("T1 UI.triggerAfter", t1, t1Result);
+        row("T1 UI.triggerAfter",
+                "Click T1. Expected: waiting changes to fired after "
+                        + "about 0.3 seconds.",
+                t1, t1Result);
 
         // E1: a DOM event trigger sets a signal from an input value
         Input e1Source = new Input();
@@ -151,14 +190,20 @@ public class TriggerSnippetsView extends Div {
         new DomEventTrigger(e1Source, "input")
                 .triggers(new SetSignalAction<>(signal, String.class,
                         new PropertyInput<>(e1Source, "value", String.class)));
-        row("E1 DOM event trigger sets a signal", e1Source, e1Result);
+        row("E1 DOM event trigger sets a signal",
+                "Type in the field. Expected: the text below follows what "
+                        + "you type.",
+                e1Source, e1Result);
 
         // E2: a double click trigger sets a property on the client only
         NativeButton e2 = button("e2");
         Div e2Result = result("e2");
         new DoubleClickTrigger(e2).triggers(
                 new SetPropertyAction<>(e2Result, "textContent", "double"));
-        row("E2 double click trigger sets a property", e2, e2Result);
+        row("E2 double click trigger sets a property",
+                "Click E2 once: nothing happens. Double-click it. "
+                        + "Expected: double.",
+                e2, e2Result);
     }
 
     private static NativeButton button(String caseId) {
@@ -173,8 +218,12 @@ public class TriggerSnippetsView extends Div {
         return result;
     }
 
-    private void row(String title, Component... content) {
+    private void row(String title, String instructions,
+            Component... content) {
         Div row = new Div(new H3(title));
+        Paragraph how = new Paragraph(instructions);
+        how.getStyle().set("margin", "0 0 0.5em").set("color", "gray");
+        row.add(how);
         row.add(content);
         add(row);
     }

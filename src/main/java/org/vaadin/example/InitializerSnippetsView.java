@@ -5,6 +5,7 @@ import java.io.Serializable;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.dom.Element;
@@ -91,10 +92,21 @@ public class InitializerSnippetsView extends Div {
                 () -> element.addJsInitializer((JsFunction) null));
         setupCase(setup, "I5", () -> JsFunction.of("return 1;"));
 
+        add(new Paragraph("Run in production mode with vaadin.csp=strict and keep "
+                + "the browser console open. No case may log a Content "
+                + "Security Policy violation or an error."));
+        add(new Paragraph("I1: click Register, Detach, Reattach and Remove in "
+                + "this order. Expected after each click: init=1 "
+                + "cleanup=0, init=1 cleanup=1, init=2 cleanup=1, init=2 "
+                + "cleanup=2. Register again counts one more init."));
         add(target, register, detach, reattach, removeRegistration,
                 new Div(new Span("init="), initCounter, new Span(" cleanup="),
-                        cleanupCounter),
-                setup);
+                        cleanupCounter));
+        add(new Paragraph("I2-I5 run when the view opens. Expected below: I2 "
+                + "IllegalArgumentException, I3 CspViolationException, I4 "
+                + "NullPointerException, I5 CspViolationException. The "
+                + "server catches them, so the browser console shows "
+                + "nothing."), setup);
     }
 
     private static void setupCase(UnorderedList setup, String caseId,
