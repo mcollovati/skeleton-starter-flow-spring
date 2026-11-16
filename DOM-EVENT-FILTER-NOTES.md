@@ -47,6 +47,8 @@ reports, so a passing test also shows that the filter ran from the bundle.
 | F7 | the same expression `event.button === 0` as the filter of one event type and as `@EventData` of another, both on one button | the filtered listener gets the click, the other gets `primary=true` |
 | F8 | Flow's `KeyUpEvent`, whose filter is the path `event.key?.length` since vaadin/flow#27021 | the key-up is sent with its key |
 | F9 | `setFilter("event.button === 0")` on a listener at runtime | `CspViolationException`: the PR does not change string filters set through the API. The view catches it, so nothing reaches the browser console. The listener was added before `setFilter`, so it stays registered without a filter, and a click reaches it |
+| F10 | `click` with the property path `filter = "element.dataset.locked"` and `preventDefault = true` on a checkbox (review of vaadin/flow#27023: the server sends `(element.dataset.locked) && event.preventDefault()`, which the client compiled); click while locked, then remove the attribute and click | locked: event sent and the checkbox stays unchecked; unlocked: no event and the checkbox is checked |
+| F11 | `setFilter("event.shiftKey").stopPropagation()` at runtime on a button inside an element with its own click listener; Shift-click, then click | `setFilter` is accepted (a path); Shift-click: the button gets it and the outer element does not; click: only the outer element gets it |
 
 ## Not covered
 
@@ -59,7 +61,12 @@ reports, so a passing test also shows that the filter ran from the bundle.
 
 ## Results
 
-Run on 2026-11-16 against the PR head cf05e7f365: all 10 tests pass.
+Run on 2026-11-16 against the PR head b110a78106: all 12 tests pass.
+
+Against the earlier PR head cf05e7f365, F1-F9 pass and F10, F11 fail: the
+browser blocks an `eval` (`script-src`) for the conditional side effect of the
+path filter, so the event is not sent, and in F11 it is not stopped either.
+b110a78106 includes the fix 3d869723f2.
 
 Control against `main` at 991b9501eb (which has vaadin/flow#27021 but not
 this PR): all 10 tests fail, because creating the view already throws

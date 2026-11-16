@@ -122,6 +122,16 @@ public class DomEventFilterView extends Div {
         }
     }
 
+    // F10: a property path filter with preventDefault. The server sends
+    // "(element.dataset.locked) && event.preventDefault()", which the client
+    // must read without compiling (review of vaadin/flow#27023)
+    @DomEvent(value = "click", filter = "element.dataset.locked", preventDefault = true)
+    public static class PathLockedClickEvent extends ComponentEvent<Component> {
+        public PathLockedClickEvent(Component source, boolean fromClient) {
+            super(source, fromClient);
+        }
+    }
+
     private final UnorderedList setup = new UnorderedList();
 
     public DomEventFilterView() {
@@ -254,6 +264,55 @@ public class DomEventFilterView extends Div {
                         + "before setFilter, so it stays registered without "
                         + "a filter: a click gives clicks=1.",
                 runtimeResult, runtime, runtimeOut);
+
+        // F10
+        Checkbox pathCheckbox = new Checkbox("f10-checkbox");
+        pathCheckbox.getElement().setAttribute("data-locked", "yes");
+        Span pathLockedOut = out("f10-out");
+        int[] pathLockedCount = { 0 };
+        ComponentUtil.addListener(pathCheckbox, PathLockedClickEvent.class,
+                e -> pathLockedOut
+                        .setText("locked clicks=" + (++pathLockedCount[0])));
+        NativeButton pathUnlock = new NativeButton("Unlock", e -> pathCheckbox
+                .getElement().removeAttribute("data-locked"));
+        pathUnlock.setId("f10-unlock");
+        section("F10 path filter with preventDefault",
+                "Click the checkbox. Expected: locked clicks=1, and the "
+                        + "checkbox stays unchecked. Click 'Unlock', then "
+                        + "the checkbox: it gets checked and the count stays 1.",
+                pathCheckbox, pathUnlock, pathLockedOut);
+
+        // F11: a property path filter set at runtime, with stopPropagation.
+        // The path is not refused, and the conditional stopPropagation must
+        // not be compiled either
+        Div stopOuter = new Div();
+        stopOuter.setId("f11-outer");
+        stopOuter.getStyle().set("display", "inline-block")
+                .set("padding", "0.3em").set("background", "lightgray");
+        PlainButton stopInner = new PlainButton("f11-button", "Click");
+        stopOuter.add(stopInner);
+        Span stopOut = out("f11-out");
+        int[] innerCount = { 0 };
+        int[] outerCount = { 0 };
+        Runnable showStop = () -> stopOut.setText(
+                "button=" + innerCount[0] + " outer=" + outerCount[0]);
+        stopOuter.getElement().addEventListener("click", e -> {
+            outerCount[0]++;
+            showStop.run();
+        });
+        String stopOutcome = setupCase("F11", () -> stopInner.getElement()
+                .addEventListener("click", e -> {
+                    innerCount[0]++;
+                    showStop.run();
+                }).setFilter("event.shiftKey").stopPropagation());
+        Span stopResult = new Span("setFilter: " + stopOutcome);
+        stopResult.setId("f11-outcome");
+        section("F11 setFilter(path) with stopPropagation at runtime",
+                "Expected: 'setFilter: OK'. Shift-click 'Click'. Expected: "
+                        + "button=1 outer=0, because the button stops the "
+                        + "event. Click it normally. Expected: button=1 "
+                        + "outer=1.",
+                stopResult, stopOuter, stopOut);
     }
 
     private Span out(String id) {

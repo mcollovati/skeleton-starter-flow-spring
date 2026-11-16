@@ -204,4 +204,36 @@ class DomEventFilterIT {
         page.locator("#f9-button").click();
         assertThat(page.locator("#f9-out")).hasText("clicks=1");
     }
+
+    @Test
+    void f10_pathFilterDecidesPreventDefault() {
+        Locator checkbox = page.locator("#f10-checkbox");
+        // Locked: the event is sent and the default is prevented
+        checkbox.click(new Locator.ClickOptions().setForce(true));
+        assertThat(page.locator("#f10-out")).hasText("locked clicks=1");
+        assertFalse(checkbox.isChecked(), "checked while locked");
+
+        page.locator("#f10-unlock").click();
+        assertThat(checkbox).not().hasAttribute("data-locked", "yes");
+        // Unlocked: the path is undefined, so no event and the default
+        // happens
+        checkbox.click(new Locator.ClickOptions().setForce(true));
+        assertTrue(checkbox.isChecked(), "not checked after unlock");
+        page.waitForTimeout(500);
+        assertThat(page.locator("#f10-out")).hasText("locked clicks=1");
+    }
+
+    @Test
+    void f11_runtimePathFilterDecidesStopPropagation() {
+        assertThat(page.locator("#setup-F11")).hasAttribute("data-outcome",
+                "OK");
+        // Passes the filter: the button gets the click and stops it
+        page.locator("#f11-button").click(new Locator.ClickOptions()
+                .setModifiers(List.of(KeyboardModifier.SHIFT)));
+        assertThat(page.locator("#f11-out")).hasText("button=1 outer=0");
+        // Fails the filter: the click is not stopped and reaches the outer
+        // element
+        page.locator("#f11-button").click();
+        assertThat(page.locator("#f11-out")).hasText("button=1 outer=1");
+    }
 }
