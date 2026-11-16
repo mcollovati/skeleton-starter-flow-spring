@@ -12,7 +12,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <vaadin.version>25.4.0-alpha6</vaadin.version>
+        <vaadin.version>25.4-SNAPSHOT</vaadin.version>
     </properties>
 
     <parent>
@@ -110,6 +110,12 @@
             <artifactId>browserless-test-spring</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.64.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -137,11 +143,19 @@
     <profiles>
         <profile>
             <id>it</id>
+            <properties>
+                <!-- JMX port of the started application; change it with
+                     -Dit.jmxPort when 9001 is taken -->
+                <it.jmxPort>9001</it.jmxPort>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.springframework.boot</groupId>
                         <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <jmxPort>${it.jmxPort}</jmxPort>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>start-spring-boot</id>
