@@ -13,6 +13,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.EventData;
@@ -90,7 +91,7 @@ public class DomEventFilterView extends Div {
     }
 
     // F5: a filter together with debounce
-    @DomEvent(value = "input", filter = "element.value.length >= 3", debounce = @DebounceSettings(timeout = 300, phases = DebouncePhase.TRAILING))
+    @DomEvent(value = "input", filter = "element.value.length >= 3", debounce = @DebounceSettings(timeout = 2300, phases = DebouncePhase.TRAILING))
     public static class LongInputEvent extends ComponentEvent<TextInput> {
         private final String value;
 
@@ -124,6 +125,10 @@ public class DomEventFilterView extends Div {
     private final UnorderedList setup = new UnorderedList();
 
     public DomEventFilterView() {
+        add(new Paragraph("Run in production mode with vaadin.csp=strict and keep "
+                + "the browser console open. No case may log a Content "
+                + "Security Policy violation or an error."));
+
         setup.setId("setup");
         add(new H2("Setup results"), setup);
 
@@ -133,7 +138,11 @@ public class DomEventFilterView extends Div {
         int[] enterCount = { 0 };
         ComponentUtil.addListener(enterInput, EnterEvent.class,
                 e -> enterOut.setText("enter=" + (++enterCount[0])));
-        section("F1 filter on the event", enterInput, enterOut);
+        section("F1 filter on the event",
+                "Type a and b, then hold Enter down for a moment. "
+                        + "Expected: enter=1. Letters and the repeated "
+                        + "keydowns of a held key do not count.",
+                enterInput, enterOut);
 
         // F2
         PlainButton enabled = new PlainButton("f2-button", "Click");
@@ -145,7 +154,10 @@ public class DomEventFilterView extends Div {
         NativeButton enable = new NativeButton("Enable", e -> enabled
                 .getElement().setAttribute("data-enabled", "true"));
         enable.setId("f2-enable");
-        section("F2 filter on the element", enabled, enable, enabledOut);
+        section("F2 filter on the element",
+                "Click 'Click': nothing happens. Click 'Enable', then "
+                        + "'Click'. Expected: clicks=1.",
+                enabled, enable, enabledOut);
 
         // F3
         PlainButton data = new PlainButton("f3-button", "Click");
@@ -154,7 +166,10 @@ public class DomEventFilterView extends Div {
         ComponentUtil.addListener(data, DataClickEvent.class,
                 e -> dataOut.setText("clicks=" + (++dataCount[0]) + " detail="
                         + e.detail + " type=" + e.type));
-        section("F3 filter with event data", data, dataOut);
+        section("F3 filter with event data",
+                "Shift-click 'Click': nothing happens. Click it "
+                        + "normally. Expected: clicks=1 detail=1 type=click.",
+                data, dataOut);
 
         // F4
         Checkbox checkbox = new Checkbox("f4-checkbox");
@@ -166,7 +181,11 @@ public class DomEventFilterView extends Div {
         NativeButton unlock = new NativeButton("Unlock", e -> checkbox
                 .getElement().setAttribute("data-locked", "no"));
         unlock.setId("f4-unlock");
-        section("F4 filter with preventDefault", checkbox, unlock, lockedOut);
+        section("F4 filter with preventDefault",
+                "Click the checkbox. Expected: locked clicks=1, and the "
+                        + "checkbox stays unchecked. Click 'Unlock', then "
+                        + "the checkbox: it gets checked and the count stays 1.",
+                checkbox, unlock, lockedOut);
 
         // F5
         TextInput longInput = new TextInput("f5-input");
@@ -175,15 +194,21 @@ public class DomEventFilterView extends Div {
         ComponentUtil.addListener(longInput, LongInputEvent.class,
                 e -> longOut.setText(
                         "events=" + (++longCount[0]) + " value=" + e.value));
-        section("F5 filter with debounce", longInput, longOut);
+        section("F5 filter with debounce",
+                "Type ab, wait: nothing happens. Type cd quickly. "
+                        + "Expected after a short pause: events=1 value=abcd.",
+                longInput, longOut);
 
         // F6
         PlainButton addon = new PlainButton("f6-button", "Click");
         Span addonOut = out("f6-out");
         int[] addonCount = { 0 };
         ComponentUtil.addListener(addon, AddonClickEvent.class,
-                e -> addonOut.setText("alt clicks=" + (++addonCount[0])));
-        section("F6 event type from another package", addon, addonOut);
+                e -> addonOut.setText("shift clicks=" + (++addonCount[0])));
+        section("F6 event type from another package",
+                "Click 'Click': nothing happens. Shift-click it. "
+                        + "Expected: shift clicks=1.",
+                addon, addonOut);
 
         // F7
         PlainButton shared = new PlainButton("f7-button", "Click");
@@ -194,7 +219,10 @@ public class DomEventFilterView extends Div {
                 e -> sharedData.setText("primary=" + e.primary));
         ComponentUtil.addListener(shared, PrimaryClickEvent.class,
                 e -> sharedOut.setText("primary clicks=" + (++sharedCount[0])));
-        section("F7 filter and event data with the same expression", shared,
+        section("F7 filter and event data with the same expression",
+                "Click 'Click'. Expected: primary clicks=1 and "
+                        + "primary=true.",
+                shared,
                 sharedOut, sharedData);
 
         // F8
@@ -204,15 +232,28 @@ public class DomEventFilterView extends Div {
         ComponentUtil.addListener(keyUp, KeyUpEvent.class,
                 e -> keyUpOut.setText("keyups=" + (++keyUpCount[0]) + " key="
                         + e.getKey().getKeys().get(0)));
-        section("F8 Flow's KeyUpEvent (path filter)", keyUp, keyUpOut);
+        section("F8 Flow's KeyUpEvent (path filter)",
+                "Type x. Expected: keyups=1 key=x.", keyUp, keyUpOut);
 
         // F9: a string filter set at runtime is still compiled, so strict
-        // refuses it
+        // refuses it. The listener is added before the filter is refused, so
+        // it stays registered without a filter.
         PlainButton runtime = new PlainButton("f9-button", "Click");
-        setupCase("F9", () -> runtime.getElement()
-                .addEventListener("click", e -> {
-                }).setFilter("event.button === 0"));
-        section("F9 setFilter(String) at runtime", runtime);
+        Span runtimeOut = out("f9-out");
+        int[] runtimeCount = { 0 };
+        String runtimeOutcome = setupCase("F9", () -> runtime.getElement()
+                .addEventListener("click", e -> runtimeOut
+                        .setText("clicks=" + (++runtimeCount[0])))
+                .setFilter("event.button === 0"));
+        Span runtimeResult = new Span("setFilter: " + runtimeOutcome);
+        runtimeResult.setId("f9-outcome");
+        section("F9 setFilter(String) at runtime",
+                "Expected: 'setFilter: CspViolationException' next to the "
+                        + "button. The server catches it, so the browser "
+                        + "console shows nothing. The listener was added "
+                        + "before setFilter, so it stays registered without "
+                        + "a filter: a click gives clicks=1.",
+                runtimeResult, runtime, runtimeOut);
     }
 
     private Span out(String id) {
@@ -221,14 +262,18 @@ public class DomEventFilterView extends Div {
         return span;
     }
 
-    private void section(String title, Component... content) {
+    private void section(String title, String instructions,
+            Component... content) {
         Div div = new Div();
         div.add(new Span(title + ": "));
         div.add(content);
+        Paragraph how = new Paragraph(instructions);
+        how.getStyle().set("margin", "0.2em 0 1em").set("color", "gray");
+        div.add(how);
         add(div);
     }
 
-    private void setupCase(String name, Runnable action) {
+    private String setupCase(String name, Runnable action) {
         String outcome;
         try {
             action.run();
@@ -240,6 +285,7 @@ public class DomEventFilterView extends Div {
         item.setId("setup-" + name);
         item.getElement().setAttribute("data-outcome", outcome);
         setup.add(item);
+        return outcome;
     }
 
 }

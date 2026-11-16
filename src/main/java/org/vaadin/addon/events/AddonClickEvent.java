@@ -9,7 +9,7 @@ import com.vaadin.flow.component.DomEvent;
  * not a property path, so the build has to find this class to put the filter
  * into the bundle.
  */
-@DomEvent(value = "click", filter = "event.altKey === true")
+@DomEvent(value = "click", filter = "event.shiftKey === true")
 public class AddonClickEvent extends ComponentEvent<Component> {
 
     public AddonClickEvent(Component source, boolean fromClient) {

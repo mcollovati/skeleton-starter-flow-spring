@@ -176,8 +176,8 @@ class DomEventFilterIT {
     void f6_eventTypeFromAnotherPackage() {
         page.locator("#f6-button").click();
         page.locator("#f6-button").click(new Locator.ClickOptions()
-                .setModifiers(List.of(KeyboardModifier.ALT)));
-        assertThat(page.locator("#f6-out")).hasText("alt clicks=1");
+                .setModifiers(List.of(KeyboardModifier.SHIFT)));
+        assertThat(page.locator("#f6-out")).hasText("shift clicks=1");
     }
 
     @Test
@@ -198,5 +198,10 @@ class DomEventFilterIT {
     void f9_runtimeStringFilterIsRefused() {
         assertThat(page.locator("#setup-F9"))
                 .hasAttribute("data-outcome", "CspViolationException");
+        assertThat(page.locator("#f9-outcome"))
+                .hasText("setFilter: CspViolationException");
+        // The refused filter is not set, but the listener stays registered
+        page.locator("#f9-button").click();
+        assertThat(page.locator("#f9-out")).hasText("clicks=1");
     }
 }

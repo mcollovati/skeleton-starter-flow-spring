@@ -43,10 +43,10 @@ reports, so a passing test also shows that the filter ran from the bundle.
 | F3 | `click` with `filter = "event.detail > 0 && !event.shiftKey"` and `@EventData` paths `event.detail`, `event.type`; Shift-click, then click | one event, with `detail=1 type=click` |
 | F4 | `click` with `filter = "element.dataset.locked === 'yes'"` and `preventDefault = true` on a checkbox; click while locked, then unlock and click | locked: event sent and the checkbox stays unchecked; unlocked: no event and the checkbox is checked |
 | F5 | `input` with `filter = "element.value.length >= 3"`, trailing debounce 300 ms, `@EventData("element.value")`; type `ab`, wait, type `cd` | nothing for `ab`; one event with `abcd` |
-| F6 | an event type in another package (`org.vaadin.addon.events.AddonClickEvent`, `filter = "event.altKey === true"`); click, then Alt-click | one event |
+| F6 | an event type in another package (`org.vaadin.addon.events.AddonClickEvent`, `filter = "event.shiftKey === true"`); click, then Shift-click | one event |
 | F7 | the same expression `event.button === 0` as the filter of one event type and as `@EventData` of another, both on one button | the filtered listener gets the click, the other gets `primary=true` |
 | F8 | Flow's `KeyUpEvent`, whose filter is the path `event.key?.length` since vaadin/flow#27021 | the key-up is sent with its key |
-| F9 | `setFilter("event.button === 0")` on a listener at runtime | `CspViolationException`: the PR does not change string filters set through the API |
+| F9 | `setFilter("event.button === 0")` on a listener at runtime | `CspViolationException`: the PR does not change string filters set through the API. The view catches it, so nothing reaches the browser console. The listener was added before `setFilter`, so it stays registered without a filter, and a click reaches it |
 
 ## Not covered
 
