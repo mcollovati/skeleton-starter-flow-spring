@@ -78,7 +78,9 @@ public class ChartsCspView extends VerticalLayout {
                 new H3("Format strings with template helpers"),
                 new Paragraph(
                         "Workaround 1: a Highcharts format string needs no JavaScript."),
-                createFormatStringChart(), new H3("Updates from the server"),
+                createFormatStringChart(),
+                new H3("Number formatting and more helpers"),
+                createHelpersChart(), new H3("Updates from the server"),
                 createDynamicChart(log),
                 new H3("Function property (not migrated)"),
                 new Paragraph(
@@ -103,6 +105,25 @@ public class ChartsCspView extends VerticalLayout {
         Tooltip tooltip = conf.getTooltip();
         tooltip.setHeaderFormat("<b>{point.key}</b><br/>");
         tooltip.setPointFormat("{series.name}: {point.y} kg");
+        tooltip.setFooterFormat("<br/>per crate");
+        conf.getLegend().setLabelFormat("{name} series");
+        return chart;
+    }
+
+    /**
+     * Number formatting, and the other template helpers of Highcharts 12:
+     * {@code ucfirst}, {@code multiply} and the {@code #unless} block.
+     */
+    private Chart createHelpersChart() {
+        Chart chart = new Chart(ChartType.COLUMN);
+        chart.setId("helpers");
+        Configuration conf = chart.getConfiguration();
+        conf.setTitle("More helpers");
+        conf.getxAxis().setCategories("apples", "pears");
+        conf.getyAxis().getLabels().setFormat("{value:,.2f}");
+        conf.addSeries(new ListSeries("Count", 3, 8));
+        conf.setPlotOptions(columnWithLabels(
+                "{ucfirst key}: {multiply y 2}{#unless (gt y 5)} small{/unless}"));
         return chart;
     }
 

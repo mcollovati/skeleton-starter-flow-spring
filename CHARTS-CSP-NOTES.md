@@ -35,8 +35,9 @@ remote ones.
 
 | Section | API | Result in strict mode |
 |---|---|---|
-| Column chart | `DataLabels.setFormat("{y} kg")`, `Tooltip.setHeaderFormat` / `setPointFormat` | works |
+| Column chart | `DataLabels.setFormat("{y} kg")`; tooltip `setHeaderFormat`, `setPointFormat`, `setFooterFormat`; `Legend.setLabelFormat("{name} series")` | works |
 | Format strings | `{divide value 1000}k` on the y axis labels, `{#if (gt y 5000)}high{else}low{/if}` on the data labels | works |
+| Number formatting and more helpers | y axis labels `{value:,.2f}`, data labels `{ucfirst key}: {multiply y 2}{#unless (gt y 5)} small{/unless}` | works |
 | Updates from the server | `DataSeries.add(...)` after the chart is drawn (point update path) | works |
 | Function property, not migrated | `Tooltip.setFormatter("function() {...}")` | refused on the server with `CspViolationException` (#10714) |
 | Workaround 1 | Highcharts format strings, see "Format strings" | works |
@@ -47,8 +48,11 @@ remote ones.
 **1. Format strings (preferred).** Highcharts format strings are templates, not
 JavaScript, so a strict CSP does not affect them. The model has them next to
 most formatters: `setFormat`, `setPointFormat`, `setHeaderFormat`,
-`setFooterFormat`, `setLabelFormat`. Highcharts 12 (bundled with Vaadin 25)
-adds template helpers, so many formatters can be replaced:
+`setFooterFormat`, `setLabelFormat`. Highcharts 12.2.0 is bundled with Vaadin 25.4 (`/charts` pins it). Its
+template helpers, from `highcharts/es-modules/Core/Templating.js`, are `add`,
+`subtract`, `multiply`, `divide`, `eq`, `ne`, `gt`, `ge`, `lt`, `le`, `#if`,
+`#unless`, `#each` and `ucfirst`; templating uses no `eval`. So many
+formatters can be replaced:
 
 | Formatter | Format string |
 |---|---|
@@ -102,13 +106,18 @@ asserts that the page reported no CSP violation and no console error.
 
 ## Result
 
-All 6 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
+All 9 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
 `vaadin.csp=strict`:
 
 - the strict header has no `unsafe-eval`
 - the column chart renders its data labels from a format string (`12 kg`)
 - the template helpers work: y axis labels such as `0k`, and data labels
   `low` and `high`
+- hovering a column shows the tooltip header (`Apples`), point
+  (`Weight: 12 kg`) and footer (`per crate`) formats
+- the legend label format renders `Weight series`
+- number formatting renders y axis labels such as `2.00`, and the helpers
+  `ucfirst`, `multiply` and `#unless` render `Apples: 6 small` and `Pears: 16`
 - a point added from the server renders (`value 20`)
 - the chart with a string formatter is refused on the server with
   `CspViolationException`, before anything reaches the browser

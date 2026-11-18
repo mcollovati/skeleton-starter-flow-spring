@@ -121,6 +121,33 @@ class ChartsCspIT {
     }
 
     @Test
+    void tooltip_hovered_headerPointAndFooterFormatsRendered() {
+        page.locator("#basic .highcharts-point").first().hover();
+        Locator tooltip = page.locator("#basic .highcharts-tooltip text");
+        // header {point.key}, point "{series.name}: {point.y} kg", footer
+        assertThat(tooltip).containsText("Apples");
+        assertThat(tooltip).containsText("Weight: 12 kg");
+        assertThat(tooltip).containsText("per crate");
+    }
+
+    @Test
+    void legend_labelFormat_rendered() {
+        assertThat(page.locator("#basic .highcharts-legend-item text"))
+                .hasText("Weight series");
+    }
+
+    @Test
+    void numberFormatAndMoreHelpers_rendered() {
+        // {value:,.2f} on the y axis
+        assertThat(page.locator("#helpers .highcharts-yaxis-labels text")
+                .filter(new Locator.FilterOptions().setHasText("2.00"))
+                .first()).isAttached();
+        // {ucfirst key}: {multiply y 2}{#unless (gt y 5)} small{/unless}
+        assertThat(chartText("helpers", "Apples: 6 small")).isAttached();
+        assertThat(chartText("helpers", "Pears: 16")).isAttached();
+    }
+
+    @Test
     void pointAddedFromServer_rendered() {
         page.locator("#add-point").click();
         assertThat(page.locator("#log")).hasText("point added");
