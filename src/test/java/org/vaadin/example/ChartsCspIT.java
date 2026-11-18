@@ -148,6 +148,15 @@ class ChartsCspIT {
     }
 
     @Test
+    void workaroundCode_shown() {
+        assertThat(page.locator("pre").filter(new Locator.FilterOptions()
+                .setHasText("setFormat(\"{divide value 1000}k\")")))
+                .hasCount(1);
+        assertThat(page.locator("pre").filter(new Locator.FilterOptions()
+                .setHasText("this.configuration.update"))).hasCount(1);
+    }
+
+    @Test
     void pointAddedFromServer_rendered() {
         page.locator("#add-point").click();
         assertThat(page.locator("#log")).hasText("point added");

@@ -106,7 +106,7 @@ asserts that the page reported no CSP violation and no console error.
 
 ## Result
 
-All 9 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
+All 10 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
 `vaadin.csp=strict`:
 
 - the strict header has no `unsafe-eval`
@@ -122,6 +122,7 @@ All 9 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
 - the chart with a string formatter is refused on the server with
   `CspViolationException`, before anything reaches the browser
 - the declared function formats the data labels (`2k*`, `4k*`, `8k*`)
+- the view shows the code of both workarounds
 
 The browser reports no CSP violation and no console error in any test.
 

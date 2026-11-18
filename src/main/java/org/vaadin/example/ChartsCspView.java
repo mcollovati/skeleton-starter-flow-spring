@@ -14,6 +14,7 @@ import com.vaadin.flow.component.charts.model.PlotOptionsColumn;
 import com.vaadin.flow.component.charts.model.Tooltip;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.js.JsDefinition;
@@ -36,6 +37,32 @@ import com.vaadin.flow.server.CspViolationException;
 public class ChartsCspView extends VerticalLayout {
 
     /**
+     * The script of {@link ChartFunctionsJs#applyDataLabelFormatter()}, a
+     * constant so that the view can also show it.
+     */
+    static final String DATA_LABEL_FORMATTER_SCRIPT = """
+            const apply = () => {
+              if (!this.configuration) {
+                return;
+              }
+              this.configuration.update({
+                plotOptions: {
+                  column: {
+                    dataLabels: {
+                      formatter() {
+                        return this.y / 1000 + 'k*';
+                      }
+                    }
+                  }
+                }
+              });
+            };
+            // chart-load fires before the chart is assigned to configuration
+            this.addEventListener('chart-load', () => setTimeout(apply));
+            apply();
+            """;
+
+    /**
      * Sets function options on the Highcharts instance of a chart, from the
      * bundle. Runs on the chart element. {@code this.configuration} is the
      * Highcharts chart once it is created, so the script also listens to
@@ -45,27 +72,7 @@ public class ChartsCspView extends VerticalLayout {
     @JsDefinition
     interface ChartFunctionsJs extends Serializable {
 
-        @JsExpression("""
-                const apply = () => {
-                  if (!this.configuration) {
-                    return;
-                  }
-                  this.configuration.update({
-                    plotOptions: {
-                      column: {
-                        dataLabels: {
-                          formatter() {
-                            return this.y / 1000 + 'k*';
-                          }
-                        }
-                      }
-                    }
-                  });
-                };
-                // chart-load fires before the chart is assigned to configuration
-                this.addEventListener('chart-load', () => setTimeout(apply));
-                apply();
-                """)
+        @JsExpression(DATA_LABEL_FORMATTER_SCRIPT)
         void applyDataLabelFormatter();
     }
 
@@ -78,20 +85,62 @@ public class ChartsCspView extends VerticalLayout {
                 new H3("Format strings with template helpers"),
                 new Paragraph(
                         "Workaround 1: a Highcharts format string needs no JavaScript."),
+                code("""
+                        // Instead of labels.setFormatter(
+                        //     "function() { return this.value / 1000 + 'k'; }")
+                        conf.getyAxis().getLabels().setFormat("{divide value 1000}k");
+
+                        // Instead of dataLabels.setFormatter(
+                        //     "function() { return this.y > 5000 ? 'high' : 'low'; }")
+                        dataLabels.setFormat("{#if (gt y 5000)}high{else}low{/if}");
+                        """),
                 createFormatStringChart(),
                 new H3("Number formatting and more helpers"),
+                code("""
+                        conf.getyAxis().getLabels().setFormat("{value:,.2f}");
+                        dataLabels.setFormat(
+                                "{ucfirst key}: {multiply y 2}{#unless (gt y 5)} small{/unless}");
+                        """),
                 createHelpersChart(), new H3("Updates from the server"),
                 createDynamicChart(log),
                 new H3("Function property (not migrated)"),
                 new Paragraph(
                         "Tooltip.setFormatter(String) sends a function as a string. "
                                 + "Strict mode refuses it on the server."),
+                code("""
+                        conf.getTooltip().setFormatter(
+                                "function() { return 'Value: ' + this.y; }");
+                        // Throws CspViolationException in strict mode
+                        chart.drawChart();
+                        """),
                 createStringFunctionButton(log),
                 new H3("Declared function"),
                 new Paragraph(
                         "Workaround 2: the function is declared in a @JsDefinition "
                                 + "interface and set on the Highcharts instance."),
+                code("""
+                        @JsDefinition
+                        interface ChartFunctionsJs extends Serializable {
+
+                            @JsExpression(\"""
+                        """ + DATA_LABEL_FORMATTER_SCRIPT.indent(12) + """
+                                    \""")
+                            void applyDataLabelFormatter();
+                        }
+
+                        chart.addAttachListener(event -> chart.getElement()
+                                .executeJs(ChartFunctionsJs.class)
+                                .applyDataLabelFormatter());
+                        """),
                 createDeclaredFunctionChart(), new Paragraph("Log:"), log);
+    }
+
+    private static Pre code(String code) {
+        Pre pre = new Pre(code);
+        pre.getStyle().set("background", "var(--lumo-contrast-5pct)")
+                .set("padding", "var(--lumo-space-s)")
+                .set("font-size", "var(--lumo-font-size-s)");
+        return pre;
     }
 
     private Chart createBasicChart() {
