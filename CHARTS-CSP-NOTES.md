@@ -22,13 +22,19 @@ server.
 
 ## What it needs
 
-- flow-components branch `feat/charts-function-csp-report` (PR #10714),
-  installed as 25.4-SNAPSHOT: `vaadin-charts-flow` (built with `-am`).
-- `vaadin-tabs-flow` from flow-components `main`, installed as 25.4-SNAPSHOT:
-  the view uses a `TabSheet`, and an older tabs snapshot still sends string
-  JavaScript (`Tabs.onAttach`), which strict mode refuses.
-- The other 25.4-SNAPSHOT artifacts from the local repository, as for the
-  Grid view.
+- flow-components `main` with branch `feat/charts-function-csp-report`
+  (PR #10714) merged in, every component module installed as 25.4-SNAPSHOT
+  from that one tree:
+
+  ```
+  mvn install -DskipTests -pl '!<every *-integration-tests module>'
+  ```
+
+  Install them all from the same tree. Jars from builds of different days can
+  ask for different web component versions (for example `25.4.0-alpha6` and
+  `25.4.0-beta1`), and then the `npm install` of the build drops packages and
+  the frontend build fails. After changing the jars, delete `node_modules` and
+  `package-lock.json`.
 - A Vaadin pro key, because Charts is a commercial component.
 
 Build offline (`-o`), so Maven does not replace the local snapshots with
@@ -77,14 +83,17 @@ it on the Highcharts instance from the browser:
 interface ChartFunctionsJs extends Serializable {
 
     @JsExpression("""
-            const apply = () => this.configuration.update({
-              plotOptions: { column: { dataLabels: {
-                formatter() { return this.y / 1000 + 'k*'; } } } }
-            });
-            this.addEventListener('chart-load', apply);
-            if (this.configuration) {
-              apply();
-            }
+            const apply = () => {
+              if (this.configuration) {
+                this.configuration.update({
+                  plotOptions: { column: { dataLabels: {
+                    formatter() { return this.y / 1000 + 'k'; }
+                  } } }
+                });
+              }
+            };
+            this.addEventListener('chart-load', () => setTimeout(apply));
+            apply();
             """)
     void applyDataLabelFormatter();
 }
@@ -93,10 +102,13 @@ chart.addAttachListener(event -> chart.getElement()
         .executeJs(ChartFunctionsJs.class).applyDataLabelFormatter());
 ```
 
-`this.configuration` is the Highcharts chart once it is created. The script
-also listens to `chart-load`, which the chart fires when it is created again,
-for example after `drawChart(true)`, because a new chart does not have the
-function. Limits: the function is not part of the Java configuration, so
+This is the same script as in the Vaadin documentation draft (Chart
+Configuration, "Declared Functions"). `this.configuration` is the Highcharts
+chart once it is created. The script also listens to `chart-load`, which the
+chart fires when it is created, also again, for example after
+`drawChart(true)`. The event fires before the chart is assigned to
+`configuration`, so the script applies the function right after it, with
+`setTimeout`. Limits: the function is not part of the Java configuration, so
 `getFormatter()` does not return it, and every option that needs a function
 needs its own small script.
 
@@ -132,7 +144,9 @@ All 10 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
   with the stack trace, from `StringFunctionReporter.report` through
   `Chart.drawChart` to the button listener; the browser console stays empty,
   because the browser never receives the chart)
-- the declared function formats the data labels (`2k*`, `4k*`, `8k*`)
+- the declared function formats the data labels (`2k`, `4k`, `8k`; the check
+  looks only at data labels, because Highcharts also shows `2k` on the y axis
+  without any function)
 - the view shows the code of both workarounds
 
 The browser reports no CSP violation and no console error in any test.

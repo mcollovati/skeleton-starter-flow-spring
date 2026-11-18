@@ -50,22 +50,14 @@ public class ChartsCspView extends VerticalLayout {
      */
     static final String DATA_LABEL_FORMATTER_SCRIPT = """
             const apply = () => {
-              if (!this.configuration) {
-                return;
+              if (this.configuration) {
+                this.configuration.update({
+                  plotOptions: { column: { dataLabels: {
+                    formatter() { return this.y / 1000 + 'k'; }
+                  } } }
+                });
               }
-              this.configuration.update({
-                plotOptions: {
-                  column: {
-                    dataLabels: {
-                      formatter() {
-                        return this.y / 1000 + 'k*';
-                      }
-                    }
-                  }
-                }
-              });
             };
-            // chart-load fires before the chart is assigned to configuration
             this.addEventListener('chart-load', () => setTimeout(apply));
             apply();
             """;

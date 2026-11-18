@@ -176,9 +176,18 @@ class ChartsCspIT {
     @Test
     void declaredFunction_dataLabelsFormatted() {
         selectTab("Declared function");
-        for (String text : List.of("2k*", "4k*", "8k*")) {
-            assertThat(chartText("declared", text)).isAttached();
+        // Only data labels: the y axis labels show 2k, 4k, ... by default
+        Locator dataLabels = page
+                .locator("#declared .highcharts-data-label text");
+        for (String text : List.of("2k", "4k", "8k")) {
+            assertThat(dataLabels.filter(new Locator.FilterOptions()
+                    .setHasText(Pattern.compile(
+                            "^" + text + "(?:\\u200B" + text + ")?$")))
+                    .first()).isAttached();
         }
+        // Without the function, the data labels show the plain values
+        assertThat(dataLabels.filter(new Locator.FilterOptions()
+                .setHasText("2000"))).hasCount(0);
     }
 
     private void selectTab(String label) {
