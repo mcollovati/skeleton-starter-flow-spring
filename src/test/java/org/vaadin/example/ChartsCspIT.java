@@ -151,30 +151,39 @@ class ChartsCspIT {
     void workaroundCode_shown() {
         assertThat(page.locator("pre").filter(new Locator.FilterOptions()
                 .setHasText("setFormat(\"{divide value 1000}k\")")))
-                .hasCount(1);
+                .isVisible();
+        selectTab("Declared function");
         assertThat(page.locator("pre").filter(new Locator.FilterOptions()
-                .setHasText("this.configuration.update"))).hasCount(1);
+                .setHasText("this.configuration.update"))).isVisible();
     }
 
     @Test
     void pointAddedFromServer_rendered() {
+        selectTab("Server updates");
         page.locator("#add-point").click();
-        assertThat(page.locator("#log")).hasText("point added");
+        assertThat(page.locator("#add-point-result")).hasText("point added");
         assertThat(chartText("dynamic", "value 20")).isAttached();
     }
 
     @Test
     void stringFormatter_refusedOnServer() {
+        selectTab("Function property");
         page.locator("#string-formatter").click();
-        assertThat(page.locator("#log"))
-                .hasText("refused: CspViolationException");
+        assertThat(page.locator("#string-formatter-result")).containsText(
+                "Refused on the server: CspViolationException: JavaScript is sent to the browser as a string");
     }
 
     @Test
     void declaredFunction_dataLabelsFormatted() {
+        selectTab("Declared function");
         for (String text : List.of("2k*", "4k*", "8k*")) {
             assertThat(chartText("declared", text)).isAttached();
         }
+    }
+
+    private void selectTab(String label) {
+        page.locator("vaadin-tab").filter(new Locator.FilterOptions()
+                .setHasText(label)).click();
     }
 
     /**

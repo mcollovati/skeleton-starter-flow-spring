@@ -24,6 +24,9 @@ server.
 
 - flow-components branch `feat/charts-function-csp-report` (PR #10714),
   installed as 25.4-SNAPSHOT: `vaadin-charts-flow` (built with `-am`).
+- `vaadin-tabs-flow` from flow-components `main`, installed as 25.4-SNAPSHOT:
+  the view uses a `TabSheet`, and an older tabs snapshot still sends string
+  JavaScript (`Tabs.onAttach`), which strict mode refuses.
 - The other 25.4-SNAPSHOT artifacts from the local repository, as for the
   Grid view.
 - A Vaadin pro key, because Charts is a commercial component.
@@ -32,6 +35,10 @@ Build offline (`-o`), so Maven does not replace the local snapshots with
 remote ones.
 
 ## What the view covers
+
+The view has one tab per use case, each with a short explanation, the code, and
+the chart: "Format strings" (workaround 1), "Server updates", "Function
+property" (not migrated) and "Declared function" (workaround 2).
 
 | Section | API | Result in strict mode |
 |---|---|---|
@@ -121,6 +128,10 @@ All 10 tests of `ChartsCspIT` pass (2026-11-18), with the production bundle and
 - a point added from the server renders (`value 20`)
 - the chart with a string formatter is refused on the server with
   `CspViolationException`, before anything reaches the browser
+  (the result appears next to the button, and the server log has the warning
+  with the stack trace, from `StringFunctionReporter.report` through
+  `Chart.drawChart` to the button listener; the browser console stays empty,
+  because the browser never receives the chart)
 - the declared function formats the data labels (`2k*`, `4k*`, `8k*`)
 - the view shows the code of both workarounds
 
