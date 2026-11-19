@@ -35,8 +35,9 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions;
  * reports no Content Security Policy violation. So the test report reads as
  * a list of what works (passed) and what does not (failed, with the reason in
  * the message). Failures are expected: they are the cases that still need a
- * fallback. Case 5 is the exception: a fallback does not support it, so its
- * test asserts that Flow refuses it and says so.
+ * fallback. Cases 5, 12 and 13 are the exceptions: a fallback does not
+ * support them, so their tests assert the refusal, by Flow for case 5 and by
+ * the browser for cases 12 and 13.
  * <p>
  * Run with {@code mvn -Pit verify}, which starts the application in
  * production mode (Flow sends the CSP header only there).
@@ -227,23 +228,31 @@ class AddonCspIT {
                 "the dynamic import did not run");
     }
 
+    /**
+     * Not supported: the browser refuses the inline handler, which Flow never
+     * runs, so the click does nothing.
+     */
     @Test
-    @DisplayName("12. Inline onclick attribute (InlineHandler)")
-    void case12_inlineHandler() {
+    @DisplayName("12. Inline onclick attribute (InlineHandler): blocked, not supported")
+    void case12_inlineHandler_blockedAsNotSupported() {
         runCase(12);
         page.locator("#area-12 span").click();
-        assertNoCspViolation();
+        assertBlockedByBrowser("script-src-attr");
         assertThat(page.locator("#area-12 span"))
-                .hasText("inline onclick ran");
+                .hasText("Click me (inline onclick)");
     }
 
+    /**
+     * Not supported: the browser refuses {@code new Function} in the add-on's
+     * own JavaScript, which Flow never sees.
+     */
     @Test
-    @DisplayName("13. new Function in the add-on's web component (EvalWidget)")
-    void case13_evalWidget() {
+    @DisplayName("13. new Function in the add-on's web component (EvalWidget): blocked, not supported")
+    void case13_evalWidget_blockedAsNotSupported() {
         runCase(13);
-        assertNoCspViolation();
+        assertBlockedByBrowser("script-src");
         assertThat(page.locator("#area-13 acme-eval-widget"))
-                .hasText("eval result: 42");
+                .hasText("eval refused by the browser: EvalError");
     }
 
     @Test
@@ -272,18 +281,24 @@ class AddonCspIT {
     }
 
     /**
-     * Fails with what the browser blocked, for a case that only the browser
-     * refuses. Waits briefly, since the violation event is dispatched after
-     * the blocked script.
+     * Asserts that the browser blocked a script under the given directive, for
+     * a case that only the browser refuses, and then forgets the violation and
+     * the console errors it caused, so that the check after the test passes.
      */
-    private void assertNoCspViolation() {
-        page.waitForTimeout(500);
-        Object violations = page.evaluate("() => window.__cspViolations");
-        if (violations instanceof List<?> list && !list.isEmpty()) {
-            page.evaluate("() => window.__cspViolations = []");
-            consoleErrors.clear();
-            fail("blocked by the browser: " + list);
+    private void assertBlockedByBrowser(String directive) {
+        try {
+            page.waitForFunction("() => window.__cspViolations.length > 0",
+                    null, new Page.WaitForFunctionOptions().setTimeout(5000));
+        } catch (PlaywrightException e) {
+            fail("the browser did not block anything within 5 s");
         }
+        Object violations = page.evaluate("() => window.__cspViolations");
+        assertTrue(violations instanceof List<?> list && !list.isEmpty()
+                && list.stream().allMatch(v -> String.valueOf(v)
+                        .startsWith(directive + " ")),
+                "expected a " + directive + " violation, got " + violations);
+        page.evaluate("() => window.__cspViolations = []");
+        consoleErrors.clear();
     }
 
     private void waitFor(String condition, String message) {
