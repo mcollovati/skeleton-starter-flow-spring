@@ -21,6 +21,7 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.router.Route;
@@ -133,6 +134,12 @@ public class CasesView extends Div {
             } catch (CspViolationException ex) {
                 status.setText("REFUSED in Java: " + ex.getClass()
                         .getSimpleName());
+                // What Flow says about the call, such as the method to
+                // declare for it
+                Pre message = new Pre(ex.getMessage());
+                message.setId("message-" + number);
+                message.getStyle().set("white-space", "pre-wrap");
+                area.add(message);
             }
         });
         run.setId("run-" + number);
