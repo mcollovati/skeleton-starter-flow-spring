@@ -13,11 +13,19 @@ import com.vaadin.flow.js.JsStringFallback;
  * {@link JsStringFallback}, and Flow runs these functions instead of the
  * strings.
  * <p>
+ * Filters and event data are listed in the annotation. The functions for
+ * cases 9-11 are in {@link AcmeCspFunctionFallbacks}, since an interface can
+ * not mix calls and functions.
+ * <p>
  * Case 5 (Highlighter) is left out on purpose: its string changes with the
  * color, so no fixed text can match it.
  */
 @JsDefinition
-@JsStringFallback
+@JsStringFallback(
+        // Case 7: EscapeListener
+        filters = "event.key === 'Escape'",
+        // Case 8: CharCounter
+        eventData = "event.target.value.trim().length")
 public interface AcmeCspFallbacks {
 
     // Case 1: AutoFocus

@@ -108,13 +108,20 @@ is a real one.
 
 This branch runs against the Flow branch `csp-addon-fallback`. There, an
 application marks a `@JsDefinition` interface with `@JsStringFallback`, and a
-string `executeJs` call whose text and parameter count match a method of it
-runs that method's bundled function instead of being refused.
+string that matches what it declares runs a function from the bundle instead
+of being refused.
 
-- `AcmeCspFallbacks`: the marked interface. Each `@JsExpression` value is
-  the add-on's exact string, with as many parameters as the add-on passes.
-  Nothing registers it: the build lists it in
-  `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
+- `AcmeCspFallbacks`: calls for the `executeJs` strings (cases 1-4, 6), each
+  `@JsExpression` value the add-on's exact string with as many parameters as
+  the add-on passes, and the filter (case 7) and event data (case 8) listed in
+  the annotation.
+- `AcmeCspFunctionFallbacks`: methods returning `JsFunction` for the
+  functions made from strings: `addJsInitializer` (case 9), `JsFunction.of`
+  (case 10) and `addDynamicImport` (case 11). They need their own interface,
+  since one interface can not mix calls and functions.
+
+Nothing registers them: the build lists them in
+`META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
 
 The root `pom.xml` imports `flow-bom` 25.4-SNAPSHOT above `vaadin-bom`, so
 all Flow modules are snapshots and everything else is 25.4.0-beta1. Install
@@ -127,9 +134,9 @@ mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-ser
 
 Results on 2026-11-19:
 
-- Browser tests, strict, production mode: 8 of 16 pass (header, 1, 1b, 2, 3,
-  4, 6, 14). Still failing: 5 (the string changes with the color), 7-11 (not
-  `executeJs`), 12 and 13 (blocked by the browser).
+- Browser tests, strict, production mode: 13 of 16 pass. Still failing: 5
+  (the string changes with the color), 12 and 13 (blocked by the browser).
+  (Before the filters, event data and functions were added: 8 of 16.)
 - Development mode (`spring-boot:run`, strict): the dev server writes the
   list at startup, cases 1-4 and 6 run, `/plain` opens.
 - Hotswap with the dev loop (`vaadin-dev apply --no-restart`, dev mode,
