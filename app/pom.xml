@@ -49,6 +49,12 @@
             <artifactId>browserless-test-spring</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.64.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -76,6 +82,10 @@
     <profiles>
         <profile>
             <id>it</id>
+            <properties>
+                <it.port>8080</it.port>
+                <it.csp>strict</it.csp>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -88,6 +98,19 @@
                                 <goals>
                                     <goal>start</goal>
                                 </goals>
+                                <configuration>
+                                    <!-- Flow sends the CSP header only in production mode,
+                                         so the tests run against the production bundle
+                                         that build-frontend made -->
+                                    <systemPropertyVariables>
+                                        <vaadin.productionMode>true</vaadin.productionMode>
+                                        <vaadin.launch-browser>false</vaadin.launch-browser>
+                                    </systemPropertyVariables>
+                                    <arguments>
+                                        <argument>--server.port=${it.port}</argument>
+                                        <argument>--vaadin.csp=${it.csp}</argument>
+                                    </arguments>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>stop-spring-boot</id>
@@ -114,6 +137,9 @@
                         <configuration>
                             <trimStackTrace>false</trimStackTrace>
                             <enableAssertions>true</enableAssertions>
+                            <systemPropertyVariables>
+                                <it.baseUrl>http://localhost:${it.port}</it.baseUrl>
+                            </systemPropertyVariables>
                         </configuration>
                     </plugin>
                 </plugins>

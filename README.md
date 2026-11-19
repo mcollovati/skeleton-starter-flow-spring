@@ -72,3 +72,34 @@ The warning does not include the JavaScript text.
   browser logs "Executing inline event handler violates ... script-src";
   case 13 `EvalError`; case 14 works; `/plain` shows the navigation error.
 - warn: all 14 cases work, 11 warnings in the log.
+
+## Browser tests
+
+`app/src/test/java/org/vaadin/example/AddonCspIT.java` checks each case in
+Chrome (Playwright for Java, using the installed Chrome; nothing is
+downloaded). Every test asserts that its case **works**: no
+`CspViolationException` in Java, the effect is visible in the browser, and no
+CSP violation is reported. So the report is the list of what works (passed)
+and what does not (failed, with the reason). The build fails as long as one
+case does not work.
+
+```
+./mvnw install -DskipTests -pl addon
+./mvnw -Pit verify -pl app
+```
+
+The `it` profile starts the application in production mode, because Flow
+sends the CSP header only there. Properties:
+
+- `-Dit.port=8094`: port (default 8080)
+- `-Dit.csp=warn`: CSP mode (default `strict`)
+
+Results on 2026-11-19 (16 tests):
+
+| Run | Passed | Failed |
+|---|---|---|
+| strict | header, 14 | 1, 1b, 2-11 (refused in Java), 12, 13 (blocked by the browser) |
+| warn | all cases | header (warn sends no policy) |
+
+The warn run shows that every case check can pass, so a failure under strict
+is a real one.
