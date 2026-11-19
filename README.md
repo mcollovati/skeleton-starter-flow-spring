@@ -1,99 +1,74 @@
-# Project Base for Vaadin and Spring Boot
+# Add-on CSP fallback reproducer (vaadin/flow#26153)
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+An application runs with `vaadin.csp=strict` and uses a third-party add-on that
+sends JavaScript as strings. The application developer cannot change the
+add-on. This project shows what breaks, as a base for designing a way for the
+application to provide a fallback.
 
-The best way to create your own project based on this starter is [start.vaadin.com](https://start.vaadin.com/) - you can get only the necessary parts and choose the package naming you want to use.
+Vaadin 25.4.0-beta1, Spring Boot.
 
-## Running the Application
-There are two ways to run the application :  using `mvn spring-boot:run` or by running the `Application` class directly from your IDE.
+## Modules
 
-You can use any IDE of your preference,but we suggest Eclipse or Intellij IDEA.
-Below are the configuration details to start the project using a `spring-boot:run` command. Both Eclipse and Intellij IDEA are covered.
+- `addon` (`com.acme.addon`): stands for an add-on from the Directory. Each
+  class uses one feature that strict CSP refuses.
+- `app` (`org.vaadin.example`): uses the add-on. `vaadin.csp=strict` is set in
+  `app/src/main/resources/application.properties`.
 
-#### Eclipse
-- Right click on a project folder and select `Run As` --> `Maven build..` . After that a configuration window is opened.
-- In the window set the value of the **Goals** field to `spring-boot:run` 
-- You can optionally select `Skip tests` checkbox
-- All the other settings can be left to default
+## Cases
 
-Once configurations are set clicking `Run` will start the application
+| # | Add-on class | Feature | Under strict |
+|---|---|---|---|
+| 1 | `AutoFocus` | `Element.executeJs(String)` in `onAttach` | refused in Java, the whole view fails |
+| 2 | `ScrollPanel.scrollToBottom` | `Element.executeJs(String)`, constant | refused in Java |
+| 3 | `ScrollPanel.getScrollTop` | `Element.executeJs(String)` with a result | refused in Java |
+| 4 | `PageTitle` | `Page.executeJs(String, Object...)` (no `this`) | refused in Java |
+| 5 | `Highlighter` | string built by concatenation | refused in Java |
+| 6 | `ConsoleLogger` | text depends on the parameter count | refused in Java |
+| 7 | `EscapeListener` | `setFilter(String)`, not a property path | refused in Java |
+| 8 | `CharCounter` | deprecated `addEventData(String)`, not a path | refused in Java |
+| 9 | `ResizeWatcher` | `addJsInitializer(String, Object...)` | refused in Java |
+| 10 | `Tooltip` | `JsFunction.of(String, Object...)` | refused in Java |
+| 11 | `LazyLoader` | `Page.addDynamicImport(String)` | refused in Java |
+| 12 | `InlineHandler` | inline `onclick` attribute | refused by the browser only |
+| 13 | `EvalWidget` | `new Function` in the add-on's own web component | refused by the browser only |
+| 14 | `EnterField` | `@DomEvent` filter + `@EventData` expression | works (control) |
 
-#### Intellij IDEA
-- On the right side of the window, select Maven --> Plugins--> `spring-boot` --> `spring-boot:run` goal
-- Optionally, you can disable tests by clicking on a `Skip Tests mode` blue button.
+Case 14 works because Flow finds `@DomEvent`/`@EventData` expressions in the
+add-on at build time and puts them in the bundle. The string APIs have no
+such step.
 
-Clicking on the green run button will start the application.
+## How to run
 
-After the application has started, you can view your it at http://localhost:8080/ in your browser.
+Flow sends the CSP header only in production mode (the dev server needs
+eval). In development mode the Java refusals (cases 1-11) happen, but the
+browser does not block cases 12 and 13.
 
+Production mode (shows all cases):
 
-If you want to run the application locally in the production mode, use `package` and `java -jar target/spring-skeleton-1.0-SNAPSHOT.jar` commands instead.
-### Running Integration Tests
-
-Integration tests are implemented using [Vaadin TestBench](https://vaadin.com/testbench). The tests take a few minutes to run and are therefore included in a separate Maven profile. We recommend running tests with a production build to minimize the chance of development time toolchains affecting test stability. To run the tests using Google Chrome, execute
-
-`mvn verify -Pit`
-
-and make sure you have a valid TestBench license installed.
-
-Profile `it` adds the following parameters to run integration tests:
-```sh
--Dwebdriver.chrome.driver=path_to_driver
--Dcom.vaadin.testbench.Parameters.runLocally=chrome
+```
+./mvnw install -DskipTests
+java -jar app/target/app-1.0-SNAPSHOT.jar
 ```
 
-If you would like to run a separate test make sure you have added these parameters to VM Options of JUnit run configuration
+Development mode (cases 1-11 only):
 
-### Live Reload (optional)
+```
+./mvnw install -DskipTests -pl addon
+./mvnw -pl app spring-boot:run
+```
 
-With live reload, you can see the results of your code changes immediately. 
-When you edit your Java code and recompile it, the application changes will be automatically reloaded and the browser is refreshed.
-This is done by leveraging [Spring Boot Developer Tools](https://docs.spring.io/spring-boot/docs/2.1.5.RELEASE/reference/html/using-boot-devtools.html). 
-To be able to see the changes in the browser tab, the page still needs to be reloaded. 
-That can also  be automated via a LiveReload browser extension. 
-One such extension for Google Chrome is [LiveReload](https://chrome.google.com/webstore/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei). 
-In Firefox, [LiveReload - Web extension](https://addons.mozilla.org/en-US/firefox/addon/livereload-web-extension/) can be used.
-You can find such similar extensions for other major browsers too.
-These extensions add an icon to your browser next to the address bar.
-To enable the extension, you should click that icon after you opened your application. 
+Open http://localhost:8080/ and press "Run" on each case. The view catches
+`CspViolationException` only to show the result in place.
+http://localhost:8080/plain uses `AutoFocus` the normal way and shows the
+error page.
 
-You can find more information at [Live Reload in Spring Boot Applications](https://vaadin.com/docs/flow/workflow/tutorial-spring-boot-live-reload.html) document.
+To see what `warn` reports, add `-Dvaadin.csp=warn`: every case works, and the
+log has one warning per string call with the add-on class in the stack trace.
+The warning does not include the JavaScript text.
 
-## Structure
+## Results (checked 2026-11-19, production jar, Chromium)
 
-Vaadin web applications are full-stack and include both client-side and server-side code in the same project.
-
-| Directory                                  | Description |
-|:-------------------------------------------| :--- |
-| `src/main/frontend/`                       | Client-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.html`       | HTML template |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.ts`         | Frontend entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`main-layout.ts`   | Main layout Web Component (optional) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`views/`           | UI views Web Components (TypeScript / HTML) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`styles/`          | Styles directory (CSS) |
-| `src/main/java/<groupId>/`                 | Server-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`Application.java` | Server entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`AppShell.java`    | application-shell configuration |
-
-## Code Formatting
-
-The project includes the Spotless code formatter.
-
-To use it in IntelliJ, install the [https://plugins.jetbrains.com/plugin/22455-spotless-applier](IntelliJ plugin)
-To use it in VS Code, install the [https://marketplace.visualstudio.com/items?itemName=richardwillis.vscode-spotless-gradle ](VS Code extension)
-To use it from the command line, run `mvn spotless:apply`
-
-## Useful links
-
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorials at [vaadin.com/tutorials](https://vaadin.com/tutorials).
-- Watch training videos and get certified at [vaadin.com/learn/training](https://vaadin.com/learn/training).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/components](https://vaadin.com/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Discover Vaadin's set of CSS utility classes that enable building any UI without custom CSS in the [docs](https://vaadin.com/docs/latest/ds/foundation/utility-classes). 
-- Find a collection of solutions to common use cases in [Vaadin Cookbook](https://cookbook.vaadin.com/).
-- Find Add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Discord channel](https://discord.gg/MYFq5RTbBn).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin/platform).
+- strict: cases 1-11 `REFUSED in Java: CspViolationException`; case 12 the
+  browser logs "Executing inline event handler violates ... script-src";
+  case 13 `EvalError`; case 14 works; `/plain` shows the navigation error.
+- warn: all 14 cases work, 11 warnings in the log.
