@@ -103,3 +103,40 @@ Results on 2026-11-19 (16 tests):
 
 The warn run shows that every case check can pass, so a failure under strict
 is a real one.
+
+## Fallback prototype (branch `repro/addon-csp-fallback-layer1`)
+
+This branch runs against the Flow branch `csp-addon-fallback`. There, an
+application marks a `@JsDefinition` interface with `@JsStringFallback`, and a
+string `executeJs` call whose text and parameter count match a method of it
+runs that method's bundled function instead of being refused.
+
+- `AcmeCspFallbacks`: the marked interface. Each `@JsExpression` value is
+  the add-on's exact string, with as many parameters as the add-on passes.
+  Nothing registers it: the build lists it in
+  `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
+
+The root `pom.xml` imports `flow-bom` 25.4-SNAPSHOT above `vaadin-bom`, so
+all Flow modules are snapshots and everything else is 25.4.0-beta1. Install
+the changed modules and the BOM from the Flow branch first (the other Flow
+modules come from the snapshot repository):
+
+```
+mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-server
+```
+
+Results on 2026-11-19:
+
+- Browser tests, strict, production mode: 8 of 16 pass (header, 1, 1b, 2, 3,
+  4, 6, 14). Still failing: 5 (the string changes with the color), 7-11 (not
+  `executeJs`), 12 and 13 (blocked by the browser).
+- Development mode (`spring-boot:run`, strict): the dev server writes the
+  list at startup, cases 1-4 and 6 run, `/plain` opens.
+- Hotswap with the dev loop (`vaadin-dev apply --no-restart`, dev mode,
+  strict): removing `@JsStringFallback` and applying deletes the list and
+  cases 1-4 and 6 are refused again; adding it back and applying writes the
+  list and they work again, without a restart. (The functions stay in the
+  bundle, since the interface is a `@JsDefinition` either way.)
+
+For the same tests without fallbacks, use the branch
+`repro/addon-csp-fallback`.
