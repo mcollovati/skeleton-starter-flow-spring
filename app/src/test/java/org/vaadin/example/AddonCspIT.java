@@ -35,7 +35,8 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions;
  * reports no Content Security Policy violation. So the test report reads as
  * a list of what works (passed) and what does not (failed, with the reason in
  * the message). Failures are expected: they are the cases that still need a
- * fallback.
+ * fallback. Case 5 is the exception: a fallback does not support it, so its
+ * test asserts that Flow refuses it and says so.
  * <p>
  * Run with {@code mvn -Pit verify}, which starts the application in
  * production mode (Flow sends the CSP header only there).
@@ -156,13 +157,19 @@ class AddonCspIT {
         assertThat(page).hasTitle("Inbox (3)");
     }
 
+    /**
+     * The one case that asserts a refusal: a string built from values that
+     * change can not have a fallback, so Flow refuses it and says why.
+     */
     @Test
-    @DisplayName("5. Concatenated string (Highlighter)")
-    void case05_highlighter() {
-        runCase(5);
-        waitFor("() => document.querySelector('#area-5 span')"
-                + ".style.outline.includes('orange')",
-                "the outline was not set");
+    @DisplayName("5. Concatenated string (Highlighter): refused, not supported")
+    void case05_highlighter_refusedAsNotSupported() {
+        page.navigate(BASE_URL + "/");
+        page.locator("#run-5").click();
+        assertThat(page.locator("#status-5"))
+                .hasText(Pattern.compile("^REFUSED in Java"));
+        assertThat(page.locator("#message-5")).containsText(
+                "@JsStringFallback does not support strings like this");
     }
 
     @Test

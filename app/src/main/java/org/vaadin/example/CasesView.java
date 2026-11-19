@@ -67,9 +67,16 @@ public class CasesView extends Div {
         addCase(4, "Page.executeJs with parameters (PageTitle)",
                 (area) -> PageTitle.setWithBadge(UI.getCurrent(), "Inbox", 3));
         addCase(5, "Concatenated string (Highlighter)", (area) -> {
-            Span target = new Span("highlighted");
-            area.add(target);
-            Highlighter.highlight(target, "orange");
+            Span first = new Span("orange");
+            Span second = new Span("blue");
+            area.add(first, new Span(" "), second);
+            try {
+                Highlighter.highlight(first, "orange");
+            } catch (CspViolationException ex) {
+                // Go on, so that the same call site sends a second, different
+                // string. Its message says that this is not supported.
+            }
+            Highlighter.highlight(second, "blue");
         });
         addCase(6, "Same text, varying parameter count (ConsoleLogger)",
                 (area) -> {
