@@ -134,9 +134,11 @@ mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-ser
 
 Results on 2026-11-19:
 
-- Browser tests, strict, production mode: 13 of 16 pass. Still failing: 5
-  (the string changes with the color), 12 and 13 (blocked by the browser).
-  (Before the filters, event data and functions were added: 8 of 16.)
+- Browser tests, strict, production mode: 16 of 16 pass (checked again on
+  2026-11-20). Cases 5, 12 and 13 are not supported, so their tests assert
+  the failure instead: case 5 is refused in Java (the string changes with the
+  color) and the message says that `@JsStringFallback` does not support it;
+  cases 12 and 13 are blocked by the browser.
 - Development mode (`spring-boot:run`, strict): the dev server writes the
   list at startup, cases 1-4 and 6 run, `/plain` opens.
 - Hotswap with the dev loop (`vaadin-dev apply --no-restart`, dev mode,
@@ -147,3 +149,55 @@ Results on 2026-11-19:
 
 For the same tests without fallbacks, use the branch
 `repro/addon-csp-fallback`.
+
+## Real add-ons (branch `repro/addon-csp-fallback-ecosystem`)
+
+This branch adds add-ons from the
+[Vaadin ecosystem build](https://github.com/mstahv/vaadin-ecosystem-build/blob/main/EcosystemBuild.java)
+that send JavaScript as strings, each with one view and one Playwright test
+in `EcosystemCspIT`. The fallback interfaces are in
+`app/src/main/java/org/vaadin/example/ecosystem/fallbacks`. Each declaration
+was pasted from the message that Flow printed for the refused call; only some
+method names were changed. The review of all 31 add-ons is in
+https://github.com/vaadin/flow/issues/26153#issuecomment-7035443652.
+
+Run only these tests (production mode, `vaadin.csp=strict`):
+
+```
+./mvnw install -DskipTests
+./mvnw -Pit verify -pl app -Dit.test=EcosystemCspIT
+```
+
+With the application running, each view opens at
+`http://localhost:8080/eco/<path>`.
+
+Results on 2026-11-20 (Vaadin 25.4.0-beta1, Flow branch
+`csp-addon-fallback`): 17 of 21 tests pass.
+
+| Add-on | Version | View (source · URL) | What the test does | Fallbacks | Result |
+|---|---|---|---|---|---|
+| flow-viritin | 3.9.1 | [`ViritinView`](app/src/main/java/org/vaadin/example/ecosystem/ViritinView.java) · [/eco/viritin](http://localhost:8080/eco/viritin) | RichText, VScroller, WebStorage | [`FlowViritinCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/FlowViritinCspFallbacks.java) | pass |
+| flow-viritin | 3.9.1 | [`ViritinMarkdownView`](app/src/main/java/org/vaadin/example/ecosystem/ViritinMarkdownView.java) · [/eco/viritin-markdown](http://localhost:8080/eco/viritin-markdown) | MarkdownMessage (element as `$0`) | [`FlowViritinCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/FlowViritinCspFallbacks.java) | pass |
+| ckeditor-vaadin | 6.1.0 | [`CkEditorView`](app/src/main/java/org/vaadin/example/ecosystem/CkEditorView.java) · [/eco/ckeditor](http://localhost:8080/eco/ckeditor) | setValue, setReadOnly, insertText | [`VaadinCkEditorCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinCkEditorCspFallbacks.java) | pass |
+| sortable-layout | 3.0.1 | [`SortableLayoutView`](app/src/main/java/org/vaadin/example/ecosystem/SortableLayoutView.java) · [/eco/sortable](http://localhost:8080/eco/sortable) | drag C above A | [`SortableLayoutCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SortableLayoutCspFallbacks.java) | pass |
+| hugerte-for-flow | 2.3.0 | [`HugeRteView`](app/src/main/java/org/vaadin/example/ecosystem/HugeRteView.java) · [/eco/hugerte](http://localhost:8080/eco/hugerte) | set the old value again after typing | [`HugeRteCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/HugeRteCspFallbacks.java) | pass |
+| superfields | 0.21.2 | [`SuperFieldsView`](app/src/main/java/org/vaadin/example/ecosystem/SuperFieldsView.java) · [/eco/superfields](http://localhost:8080/eco/superfields) | read-only GridSelect, SuperTextField input mode | [`SuperFieldsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SuperFieldsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (input mode), also with `vaadin.csp=off` |
+| superfields | 0.21.2 | [`SuperFieldsMultiView`](app/src/main/java/org/vaadin/example/ecosystem/SuperFieldsMultiView.java) · [/eco/superfields-multi](http://localhost:8080/eco/superfields-multi) | GridMultiSelect (element as `$0`) | [`SuperFieldsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SuperFieldsCspFallbacks.java) | pass |
+| enhanced-tabs-addon | 1.2.2 | [`EnhancedTabsView`](app/src/main/java/org/vaadin/example/ecosystem/EnhancedTabsView.java) · [/eco/enhanced-tabs](http://localhost:8080/eco/enhanced-tabs) | pick a tab in the overflow menu | [`EnhancedTabsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/EnhancedTabsCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (menu), also with `vaadin.csp=off` |
+| twincolgrid | 4.0.1 | [`TwinColGridView`](app/src/main/java/org/vaadin/example/ecosystem/TwinColGridView.java) · [/eco/twincolgrid](http://localhost:8080/eco/twincolgrid) | no selection column, click a row and add it | [`TwinColGridCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/TwinColGridCspFallbacks.java) | pass |
+| markdown-editor-addon | 2.0.3 | [`MarkdownViewerView`](app/src/main/java/org/vaadin/example/ecosystem/MarkdownViewerView.java) · [/eco/markdown](http://localhost:8080/eco/markdown) | MarkdownViewer shown and removed | [`MarkdownEditorCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/MarkdownEditorCspFallbacks.java) | pass |
+| image-crop-addon | 1.3.0 | [`ImageCropView`](app/src/main/java/org/vaadin/example/ecosystem/ImageCropView.java) · [/eco/image-crop](http://localhost:8080/eco/image-crop) | setCrop draws the selection | [`ImageCropCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ImageCropCspFallbacks.java) | pass |
+| zoomist-addon | 1.3.0 | [`ZoomistView`](app/src/main/java/org/vaadin/example/ecosystem/ZoomistView.java) · [/eco/zoomist](http://localhost:8080/eco/zoomist) | getContainerData | [`ZoomistCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ZoomistCspFallbacks.java) | pass |
+| xterm-console | 3.3.0 | [`XTermView`](app/src/main/java/org/vaadin/example/ecosystem/XTermView.java) · [/eco/xterm](http://localhost:8080/eco/xterm) | writeln | [`XTermConsoleCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/XTermConsoleCspFallbacks.java) | pass |
+| year-month-calendar | 4.6.2 | [`YearMonthCalendarView`](app/src/main/java/org/vaadin/example/ecosystem/YearMonthCalendarView.java) · [/eco/year-month-calendar](http://localhost:8080/eco/year-month-calendar) | class name generator | [`YearMonthCalendarCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/YearMonthCalendarCspFallbacks.java) | pass |
+| chat-assistant-addon | 5.2.0 | [`ChatAssistantView`](app/src/main/java/org/vaadin/example/ecosystem/ChatAssistantView.java) · [/eco/chat-assistant](http://localhost:8080/eco/chat-assistant) | open the chat window with a message | [`ChatAssistantCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ChatAssistantCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | fail: all strings match, but `connect-src` has no `data:`, so `vaadin-icon` can not load a `data:` icon |
+| extended-login | 1.1.0 | [`ExtendedLoginView`](app/src/main/java/org/vaadin/example/ecosystem/ExtendedLoginView.java) · [/eco/extended-login](http://localhost:8080/eco/extended-login) | replaced header, no forgot password link | [`ExtendedLoginCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ExtendedLoginCspFallbacks.java) | pass |
+| chipfield-addon | 2.8.0 | [`ChipFieldView`](app/src/main/java/org/vaadin/example/ecosystem/ChipFieldView.java) · [/eco/chipfield](http://localhost:8080/eco/chipfield) | chips for the value | [`ChipFieldCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ChipFieldCspFallbacks.java) | pass |
+| orgchart-addon | 5.4.0 | [`OrgChartView`](app/src/main/java/org/vaadin/example/ecosystem/OrgChartView.java) · [/eco/orgchart](http://localhost:8080/eco/orgchart) | chart shown, add a child | [`OrgChartCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/OrgChartCspFallbacks.java) | pass |
+| fullcalendar2 | 8.0.0 | [`FullCalendarView`](app/src/main/java/org/vaadin/example/ecosystem/FullCalendarView.java) · [/eco/fullcalendar](http://localhost:8080/eco/fullcalendar) | default setup | [`FullCalendarCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/FullCalendarCspFallbacks.java) | fail, expected: the add-on's own client uses `new Function` (browser only) |
+| fullcalendar2 | 8.0.0 | [`FullCalendarSelectView`](app/src/main/java/org/vaadin/example/ecosystem/FullCalendarSelectView.java) · [/eco/fullcalendar-select](http://localhost:8080/eco/fullcalendar-select) | select days and clear the selection | [`FullCalendarCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/FullCalendarCspFallbacks.java) | pass |
+| maplibre | 2.1.1 | [`MapLibreView`](app/src/main/java/org/vaadin/example/ecosystem/MapLibreView.java) · [/eco/maplibre](http://localhost:8080/eco/maplibre) | the test asserts the refusal | none: the strings contain ids and coordinates | pass (refused, not supported) |
+
+`VaadinComponentsCspFallbacks` covers the string JavaScript of Vaadin's own
+`MenuBar` and `Dialog` in 25.4.0-beta1. It is already fixed in
+flow-components, so it will not be needed after the next release.
