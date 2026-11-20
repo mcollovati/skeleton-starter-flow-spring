@@ -2,6 +2,7 @@ package org.vaadin.example;
 
 import com.acme.addon.AutoFocus;
 import com.acme.addon.CharCounter;
+import com.acme.addon.ClickReporter;
 import com.acme.addon.ConsoleLogger;
 import com.acme.addon.EnterField;
 import com.acme.addon.EscapeListener;
@@ -105,6 +106,8 @@ public class CasesView extends Div {
         });
         addCase(11, "Page.addDynamicImport(String) (LazyLoader)",
                 (area) -> LazyLoader.load(UI.getCurrent()));
+        addCase(15, "JsFunction.of + withArguments (ClickReporter)",
+                (area) -> area.add(new ClickReporter("clicked: ")));
 
         add(new H3("Refused only by the browser (Flow cannot see it)"));
         addCase(12, "Inline onclick attribute (InlineHandler)",

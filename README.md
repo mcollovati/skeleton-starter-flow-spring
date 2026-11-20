@@ -32,6 +32,7 @@ Vaadin 25.4.0-beta1, Spring Boot.
 | 12 | `InlineHandler` | inline `onclick` attribute | refused by the browser only |
 | 13 | `EvalWidget` | `new Function` in the add-on's own web component | refused by the browser only |
 | 14 | `EnterField` | `@DomEvent` filter + `@EventData` expression | works (control) |
+| 15 | `ClickReporter` | `JsFunction.of(String, Object...).withArguments("type")`, given to `executeJs(String, Object...)` | refused in Java |
 
 Case 14 works because Flow finds `@DomEvent`/`@EventData` expressions in the
 add-on at build time and puts them in the bundle. The string APIs have no
@@ -114,11 +115,13 @@ of being refused.
 - `AcmeCspFallbacks`: calls for the `executeJs` strings (cases 1-4, 6), each
   `@JsExpression` value the add-on's exact string with as many parameters as
   the add-on passes, and the filter (case 7) and event data (case 8) listed in
-  the annotation.
+  the annotation. Case 15 has its call here too.
 - `AcmeCspFunctionFallbacks`: methods returning `JsFunction` for the
   functions made from strings: `addJsInitializer` (case 9), `JsFunction.of`
   (case 10) and `addDynamicImport` (case 11). They need their own interface,
-  since one interface can not mix calls and functions.
+  since one interface can not mix calls and functions. The function of case
+  15 declares `@JsFunctionParameterNames("type")`, the names the add-on gives
+  to `withArguments`.
 
 Nothing registers them: the build lists them in
 `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
@@ -134,9 +137,11 @@ mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-ser
 
 Results on 2026-11-19:
 
-- Browser tests, strict, production mode: 13 of 16 pass. Still failing: 5
-  (the string changes with the color), 12 and 13 (blocked by the browser).
-  (Before the filters, event data and functions were added: 8 of 16.)
+- Browser tests, strict, production mode: 17 of 17 pass (2026-11-20, with
+  case 15). Cases 5, 12 and 13 are not supported, so their tests assert the
+  failure instead: case 5 is refused in Java (the string changes with the
+  color) and the message says that `@JsStringFallback` does not support it;
+  cases 12 and 13 are blocked by the browser.
 - Development mode (`spring-boot:run`, strict): the dev server writes the
   list at startup, cases 1-4 and 6 run, `/plain` opens.
 - Hotswap with the dev loop (`vaadin-dev apply --no-restart`, dev mode,
@@ -144,6 +149,22 @@ Results on 2026-11-19:
   cases 1-4 and 6 are refused again; adding it back and applying writes the
   list and they work again, without a restart. (The functions stay in the
   bundle, since the interface is a `@JsDefinition` either way.)
+- Hotswap of a new filter (2026-11-20, dev loop, dev mode, strict): change
+  `EscapeListener` to `setFilter("event.key === 'Delete'")`, as a new add-on
+  release would, add that string to `filters` of `AcmeCspFallbacks`, and run
+  `vaadin-dev apply --no-restart`. (Use a key nothing else declares:
+  `EnterField` already has a function for `Enter`.)
+  - With `-Dvaadin.frontend.hotdeploy=true` in `VAADIN_DEV_DAEMON_OPTS`
+    (Vite running): the function is added to
+    `src/main/frontend/generated/vaadin-js-definitions.js`, and case 7 fires
+    on Delete with nothing compiled in the browser.
+  - With the default dev bundle: Flow logs that the bundle does not carry the
+    JavaScript of `AcmeCspFallbacks` until a restart. Case 7 still fires,
+    because without a CSP header the browser compiles the filter and logs a
+    console warning.
+  - `apply --no-restart` reports that the change needs a restart ("frontend
+    imports changed (AcmeCspFallbacks) ... escalating to restart"), as for a
+    changed method of a `@JsDefinition`, so a plain `apply` restarts.
 
 For the same tests without fallbacks, use the branch
 `repro/addon-csp-fallback`.

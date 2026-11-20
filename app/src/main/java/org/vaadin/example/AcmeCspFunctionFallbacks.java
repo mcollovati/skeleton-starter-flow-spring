@@ -3,6 +3,7 @@ package org.vaadin.example;
 import com.vaadin.flow.dom.JsFunction;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsFunctionParameterNames;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -28,6 +29,12 @@ public interface AcmeCspFunctionFallbacks {
     // Case 10: Tooltip, JsFunction.of(String, Object...)
     @JsExpression("this.title = $0")
     JsFunction setTitle(Object text);
+
+    // Case 15: ClickReporter, JsFunction.of(String, Object...) followed by
+    // withArguments("type"), so the method declares the same name
+    @JsExpression("$0.textContent = $1 + type")
+    @JsFunctionParameterNames("type")
+    JsFunction reportClick(Object element, Object prefix);
 
     // Case 11: LazyLoader, Page.addDynamicImport(String)
     @JsExpression("return new Promise(r => setTimeout(() => { window.acmeLoaded = true; r(); }, 10))")

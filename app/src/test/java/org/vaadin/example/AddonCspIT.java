@@ -228,6 +228,14 @@ class AddonCspIT {
                 "the dynamic import did not run");
     }
 
+    @Test
+    @DisplayName("15. JsFunction.of + withArguments (ClickReporter)")
+    void case15_clickReporter() {
+        runCase(15);
+        page.locator("#area-15 span").click();
+        assertThat(page.locator("#area-15 span")).hasText("clicked: click");
+    }
+
     /**
      * Not supported: the browser refuses the inline handler, which Flow never
      * runs, so the click does nothing.

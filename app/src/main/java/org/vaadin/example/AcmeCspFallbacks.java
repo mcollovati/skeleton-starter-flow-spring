@@ -50,4 +50,8 @@ public interface AcmeCspFallbacks {
 
     @JsExpression("console.log('[acme]', $0, $1, $2)")
     void log(Object first, Object second, Object third);
+
+    // Case 15: ClickReporter, the call that gets the function
+    @JsExpression("this.addEventListener('click', e => $0(e.type))")
+    void listenForClicks(Object handler);
 }
