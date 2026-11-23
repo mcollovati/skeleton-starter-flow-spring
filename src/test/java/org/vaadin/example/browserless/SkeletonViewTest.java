@@ -1,4 +1,4 @@
-package org.vaadin.example;
+package org.vaadin.example.browserless;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
 import com.vaadin.flow.component.Key;
@@ -11,11 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public class MainViewTest extends SpringBrowserlessTest {
+public class SkeletonViewTest extends SpringBrowserlessTest {
 
     @BeforeEach
     public void open() {
-        navigate(MainView.class);
+        navigate(SkeletonView.class);
     }
 
     @Test

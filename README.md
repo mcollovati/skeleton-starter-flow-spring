@@ -1,99 +1,112 @@
-# Project Base for Vaadin and Spring Boot
+# CSP reproducers, all in one application
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+This branch (`repro/csp-all`) collects the use cases of the CSP reproducer
+branches into one Spring Boot application. The original branches are not
+changed. Use them when you need the exact state that was tested for a PR.
 
-The best way to create your own project based on this starter is [start.vaadin.com](https://start.vaadin.com/) - you can get only the necessary parts and choose the package naming you want to use.
+Vaadin 25.4-SNAPSHOT (Flow `main`). The application runs with
+`vaadin.csp=strict`. Open http://localhost:8080/ for an index of all cases.
 
-## Running the Application
-There are two ways to run the application :  using `mvn spring-boot:run` or by running the `Application` class directly from your IDE.
+## Where each case comes from
 
-You can use any IDE of your preference,but we suggest Eclipse or Intellij IDEA.
-Below are the configuration details to start the project using a `spring-boot:run` command. Both Eclipse and Intellij IDEA are covered.
+| Package / folder | Source branch | Flow PR or issue | Notes |
+|---|---|---|---|
+| `snippets` | `repro/js-snippets` | #26830 | `docs/CSP-NOTES.md`, `docs/DYNAMIC-IMPORT-NOTES.md` |
+| `triggers` | `repro/trigger-snippets-26889` | #26889 | `docs/TRIGGER-SNIPPETS-NOTES.md` |
+| `errors` | `repro/declared-js-errors-27025` | #27025 | `docs/DECLARED-JS-ERRORS-NOTES.md` |
+| `executejs` | `repro/declare-simple-executejs-calls` | #26699 | `docs/PR-26699-NOTES.md` |
+| `eventdata` | `repro/event-data-snippets` | #25658 | `docs/EVENT-DATA-NOTES.md` |
+| `eventdatapath` | `repro/add-event-data-path` | #26999, #27001 | `docs/EVENT-DATA-PATH-NOTES.md` |
+| `bundledeventdata` | `repro/bundled-event-data` | #27000 | `docs/BUNDLED-EVENT-DATA-NOTES.md` |
+| `domfilters` | `repro/bundled-dom-event-filters-27023` | #27023 | `docs/DOM-EVENT-FILTER-NOTES.md` |
+| `shortcuts` | `repro/declare-shortcut-javascript` | #26953 | `docs/SHORTCUT-NOTES.md` |
+| `components` | `repro/grid-strict-csp`, `repro/charts-strict-csp` | | `docs/GRID-CSP-NOTES.md`, `docs/CHARTS-CSP-NOTES.md` |
+| `browserless` | `repro/csp-browserless` | | `docs/CSP-BROWSERLESS.md` |
+| `addon-fallback/` | `repro/addon-csp-fallback-ecosystem` + case 15 of `repro/addon-csp-fallback-layer1` | #26153, PR #27128 | `addon-fallback/README.md` |
 
-#### Eclipse
-- Right click on a project folder and select `Run As` --> `Maven build..` . After that a configuration window is opened.
-- In the window set the value of the **Goals** field to `spring-boot:run` 
-- You can optionally select `Skip tests` checkbox
-- All the other settings can be left to default
+Packages are under `org.vaadin.example`, in `src/main/java` and
+`src/test/java`. Routes are the same as in the source branches.
 
-Once configurations are set clicking `Run` will start the application
+The notes in `docs/` are copied from the source branches. Their results and
+dates describe the Flow build that was tested at that time. Build commands in
+them refer to the layout of the source branch.
 
-#### Intellij IDEA
-- On the right side of the window, select Maven --> Plugins--> `spring-boot` --> `spring-boot:run` goal
-- Optionally, you can disable tests by clicking on a `Skip Tests mode` blue button.
+## Changes compared with the source branches
 
-Clicking on the green run button will start the application.
+- `/` is now the index of all cases. The skeleton view moved to `/skeleton`
+  (`browserless.SkeletonView`). The index views of the shortcut and
+  `executejs` branches are now `/shortcut-cases` and `/executejs-cases`.
+- `event-data-snippets` had an older copy of `SnippetView` (from before
+  vaadin/flow#26830). Only the `js-snippets` version is here.
+- Spring Security comes from `declare-simple-executejs-calls`. Only the
+  `executejs` views need a login (`user` / `user`). All other views are
+  `@AnonymousAllowed`.
+- That branch set `@Push(transport = WEBSOCKET)` on `Application`. Here only
+  `LogoutView` turns on push, so that push does not change the other cases.
+- `vaadin.csp=strict` for all cases. The `js-snippets`, `event-data-snippets`,
+  `declare-simple-executejs-calls` and shortcut branches used `warn`. Use
+  `-Dvaadin.csp=warn` to get the warnings instead.
+- The Node check scripts of `declare-simple-executejs-calls` (`check/`) are
+  not included.
+- `@AnonymousAllowed` is written fully qualified on the `@Route` line, so
+  that line numbers in the views stay the same as in the source branches
+  (tests and notes refer to them).
+- `/sample.txt` is public in `SecurityConfig`, for the trigger cases.
+- The shortcut review tests run with `vaadin.csp=warn`, the default of their
+  source branch.
+- Updated to the merged Flow API: `@JsCalledWith` is now
+  `@JsFunctionParameterNames` (vaadin/flow#27018), and `OpenInNewTab.onClick`
+  is now `Download.onClick(..., DownloadTarget.NEW_TAB)` (vaadin/flow#27074).
+- Not included: `csp-demo` (no own commits), `repro/event-data-bean-decoding`
+  (25.3, not CSP), `repro/native-snippet-type-proxy` (Quarkus native) and
+  `repro/js-definition-optimize-bundle` (a build-time bundle issue).
 
-After the application has started, you can view your it at http://localhost:8080/ in your browser.
+## Running
 
+Install Flow `main` (including `flow-client`) first, see the notes.
 
-If you want to run the application locally in the production mode, use `package` and `java -jar target/spring-skeleton-1.0-SNAPSHOT.jar` commands instead.
-### Running Integration Tests
-
-Integration tests are implemented using [Vaadin TestBench](https://vaadin.com/testbench). The tests take a few minutes to run and are therefore included in a separate Maven profile. We recommend running tests with a production build to minimize the chance of development time toolchains affecting test stability. To run the tests using Google Chrome, execute
-
-`mvn verify -Pit`
-
-and make sure you have a valid TestBench license installed.
-
-Profile `it` adds the following parameters to run integration tests:
-```sh
--Dwebdriver.chrome.driver=path_to_driver
--Dcom.vaadin.testbench.Parameters.runLocally=chrome
+```
+./mvnw spring-boot:run                    # development mode
+./mvnw test                               # browserless and review tests
+# all Playwright ITs, production mode; -Dtest=NONE skips the unit tests,
+# because some of them fail on purpose (see below)
+./mvnw -Pit clean verify -Dvaadin.force.production.build=true \
+    -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false
+./mvnw -Pit verify -Dit.test=GridCspIT    # one IT
 ```
 
-If you would like to run a separate test make sure you have added these parameters to VM Options of JUnit run configuration
+The ITs use Playwright and open `http://localhost:8080` (change it with
+`-Dit.baseUrl`).
 
-### Live Reload (optional)
+## Results on 2026-11-23 (Flow `main` 99a61c1043)
 
-With live reload, you can see the results of your code changes immediately. 
-When you edit your Java code and recompile it, the application changes will be automatically reloaded and the browser is refreshed.
-This is done by leveraging [Spring Boot Developer Tools](https://docs.spring.io/spring-boot/docs/2.1.5.RELEASE/reference/html/using-boot-devtools.html). 
-To be able to see the changes in the browser tab, the page still needs to be reloaded. 
-That can also  be automated via a LiveReload browser extension. 
-One such extension for Google Chrome is [LiveReload](https://chrome.google.com/webstore/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei). 
-In Firefox, [LiveReload - Web extension](https://addons.mozilla.org/en-US/firefox/addon/livereload-web-extension/) can be used.
-You can find such similar extensions for other major browsers too.
-These extensions add an icon to your browser next to the address bar.
-To enable the extension, you should click that icon after you opened your application. 
+Playwright ITs: 92 of 94 pass. Unit and browserless tests: 11 of 14 pass.
 
-You can find more information at [Live Reload in Spring Boot Applications](https://vaadin.com/docs/flow/workflow/tutorial-spring-boot-live-reload.html) document.
+Failures that are not caused by combining the branches (the source branch
+fails in the same way against the same Flow build, or the notes say so):
 
-## Structure
+| Test | Result | Why |
+|---|---|---|
+| `BundledEventDataIT.elementExpression_notBundled_refusedByStrictMode` | `OK`, expected `CspViolationException` | Flow now runs this expression in strict mode. Same on `repro/bundled-event-data` |
+| `EventDataPathIT.domEventExpressionEventData_refusedByStrictMode` | `OK`, expected `CspViolationException` | Same. Same on `repro/add-event-data-path` |
+| `CspViewCspTest.openingTheViewReportsConstructorAndAttachCode` | `addEventData` (line 30) is no longer reported | Flow reads event data property paths without compiling them (vaadin/flow#26916) |
+| `SkeletonViewCspTest.skeletonViewHasNoApplicationViolations` | no Vaadin violations at all | Flow and `Button` no longer send string JavaScript in this view. In strict mode `new UI()` also works now, so step 3 of `docs/CSP-BROWSERLESS.md` is out of date |
+| `DelegateOptionsTest` | fails | open bug, see `docs/SHORTCUT-NOTES.md` |
 
-Vaadin web applications are full-stack and include both client-side and server-side code in the same project.
+The tests are not changed, so they still show the result from the time of
+the source branch.
 
-| Directory                                  | Description |
-|:-------------------------------------------| :--- |
-| `src/main/frontend/`                       | Client-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.html`       | HTML template |
-| &nbsp;&nbsp;&nbsp;&nbsp;`index.ts`         | Frontend entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`main-layout.ts`   | Main layout Web Component (optional) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`views/`           | UI views Web Components (TypeScript / HTML) |
-| &nbsp;&nbsp;&nbsp;&nbsp;`styles/`          | Styles directory (CSS) |
-| `src/main/java/<groupId>/`                 | Server-side source directory |
-| &nbsp;&nbsp;&nbsp;&nbsp;`Application.java` | Server entrypoint |
-| &nbsp;&nbsp;&nbsp;&nbsp;`AppShell.java`    | application-shell configuration |
+Not checked here: the login and logout cases of `executejs` (no automated
+test), and `addon-fallback/` (needs a build of PR #27128).
 
-## Code Formatting
+### Add-on fallbacks
 
-The project includes the Spotless code formatter.
+`addon-fallback/` is a separate Maven project (an add-on module and an
+application module). It is not part of the root build, because it needs the
+open Flow PR #27128. Build it with a local Flow build of that PR:
 
-To use it in IntelliJ, install the [https://plugins.jetbrains.com/plugin/22455-spotless-applier](IntelliJ plugin)
-To use it in VS Code, install the [https://marketplace.visualstudio.com/items?itemName=richardwillis.vscode-spotless-gradle ](VS Code extension)
-To use it from the command line, run `mvn spotless:apply`
+```
+./mvnw -f addon-fallback/pom.xml -Pit verify
+```
 
-## Useful links
-
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorials at [vaadin.com/tutorials](https://vaadin.com/tutorials).
-- Watch training videos and get certified at [vaadin.com/learn/training](https://vaadin.com/learn/training).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/components](https://vaadin.com/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Discover Vaadin's set of CSS utility classes that enable building any UI without custom CSS in the [docs](https://vaadin.com/docs/latest/ds/foundation/utility-classes). 
-- Find a collection of solutions to common use cases in [Vaadin Cookbook](https://cookbook.vaadin.com/).
-- Find Add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Discord channel](https://discord.gg/MYFq5RTbBn).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin/platform).
+See `addon-fallback/README.md`.

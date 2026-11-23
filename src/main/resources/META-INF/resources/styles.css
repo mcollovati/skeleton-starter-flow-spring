@@ -11,3 +11,41 @@ vaadin-text-field.bordered::part(input-field) {
 }
 
 
+
+/* From repro/declare-shortcut-javascript */
+.case {
+  border: 1px solid var(--lumo-contrast-30pct);
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
+  max-width: 50em;
+}
+
+.case h4 {
+  margin: 0.2em 0;
+}
+
+.log {
+  font-family: monospace;
+  border: 1px dashed var(--lumo-contrast-50pct);
+  padding: 0.5em;
+  min-height: 3em;
+  max-width: 50em;
+}
+
+[popover] {
+  border: 2px solid orange;
+  padding: 1em;
+}
+/* Element.flashClass("flash"): the class is removed when the animation ends */
+.box {
+  width: 120px;
+  padding: 1em;
+  border: 1px solid var(--lumo-contrast-30pct);
+}
+.box.flash {
+  animation: flash-box 1s;
+}
+@keyframes flash-box {
+  from { background: orange; }
+  to { background: orange; }
+}
