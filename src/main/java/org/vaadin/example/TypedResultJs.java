@@ -1,6 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
 import java.util.List;
 
 import tools.jackson.databind.JsonNode;
@@ -10,13 +9,14 @@ import com.vaadin.flow.component.page.JavaScriptResult;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 
 /**
  * Methods with typed results (vaadin/flow#25811, PR #26890). Each method is
  * used by one row of {@link TypedResultView}.
  */
 @JsDefinition
-public interface TypedResultJs extends Serializable {
+public interface TypedResultJs extends JsInvokers {
 
     // Conversion to simple types, beans and generic types
 
