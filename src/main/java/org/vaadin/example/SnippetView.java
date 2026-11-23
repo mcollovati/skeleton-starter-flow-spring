@@ -1,16 +1,15 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.dom.JsFunction;
-import com.vaadin.flow.js.JsCalledWith;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsFunctionParameterNames;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.CspViolationException;
@@ -30,38 +29,38 @@ public class SnippetView extends VerticalLayout {
      * methods (each returns a {@link JsFunction}).
      */
     @JsDefinition
-    public interface Snippets extends Serializable {
+    public interface Snippets extends JsSnippets {
 
-        /** With {@code @JsCalledWith}: one capture ($0) and one called param. */
+        /** With {@code @JsFunctionParameterNames}: one capture ($0) and one called param. */
         @JsExpression("return $0 + ': ' + value;")
-        @JsCalledWith("value")
+        @JsFunctionParameterNames("value")
         JsFunction labeled(String label);
 
         /**
-         * Without {@code @JsCalledWith}: the expression returns the function
+         * Without {@code @JsFunctionParameterNames}: the expression returns the function
          * itself (the lazy form), so an arbitrary calling convention works.
          */
         @JsExpression("return (name) => $0 + ', ' + name + '!';")
         JsFunction greeter(String greeting);
 
-        /** Empty {@code @JsCalledWith}: the function takes no parameters. */
+        /** Empty {@code @JsFunctionParameterNames}: the function takes no parameters. */
         @JsExpression("return $0;")
-        @JsCalledWith({})
+        @JsFunctionParameterNames({})
         JsFunction constant(String text);
 
         /** Several called params with a capture ($0) between them. */
         @JsExpression("return a + $0 + b;")
-        @JsCalledWith({ "a", "b" })
+        @JsFunctionParameterNames({ "a", "b" })
         JsFunction join(String separator);
 
         /** No captures (no method parameters) with a called param. */
         @JsExpression("return value.toUpperCase();")
-        @JsCalledWith("value")
+        @JsFunctionParameterNames("value")
         JsFunction upper();
 
         /** Variadic captures ($0 fixed, $1 the rest) with a called param. */
         @JsExpression("return [$0, ...$1].join(sep);")
-        @JsCalledWith("sep")
+        @JsFunctionParameterNames("sep")
         JsFunction prefixed(String head, String... tail);
     }
 
@@ -71,7 +70,7 @@ public class SnippetView extends VerticalLayout {
      * result of invoking the passed function into its own {@code this}.
      */
     @JsDefinition
-    public interface Sink extends Serializable {
+    public interface Sink extends JsInvokers {
         @JsExpression("this.textContent = $0();")
         void show0(JsFunction fn);
 
