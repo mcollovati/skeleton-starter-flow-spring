@@ -1,6 +1,5 @@
 package org.vaadin.example.review;
 
-import java.io.Serializable;
 import java.util.List;
 
 import com.vaadin.browserless.SpringBrowserlessTest;
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class DuplicateDelegateTest extends SpringBrowserlessTest {
 
     @JsDefinition
-    public interface LocatorJs extends Serializable {
+    public interface LocatorJs extends JsSnippets {
 
         @JsExpression("return document.getElementById($0);")
         JsFunction byId(String id);

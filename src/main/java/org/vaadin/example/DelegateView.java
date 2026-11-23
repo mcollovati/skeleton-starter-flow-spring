@@ -1,7 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.Shortcuts;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.dom.JsFunction;
@@ -19,7 +17,7 @@ import com.vaadin.flow.router.Route;
 public class DelegateView extends AbstractDelegateView {
 
     @JsDefinition
-    public interface LocatorJs extends Serializable {
+    public interface LocatorJs extends JsSnippets {
 
         @JsExpression("return document.getElementById($0);")
         JsFunction byId(String id);
