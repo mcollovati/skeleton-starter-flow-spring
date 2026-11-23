@@ -3,6 +3,7 @@ package org.vaadin.example;
 import com.vaadin.flow.dom.JsFunction;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -12,7 +13,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface AcmeCspFunctionFallbacks {
+public interface AcmeCspFunctionFallbacks extends JsSnippets {
 
     // Case 9: ResizeWatcher, addJsInitializer(String, Object...). The text
     // block gives the same string as the add-on's text block.

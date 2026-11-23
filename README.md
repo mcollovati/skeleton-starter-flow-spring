@@ -111,14 +111,15 @@ application marks a `@JsDefinition` interface with `@JsStringFallback`, and a
 string that matches what it declares runs a function from the bundle instead
 of being refused.
 
-- `AcmeCspFallbacks`: calls for the `executeJs` strings (cases 1-4, 6), each
-  `@JsExpression` value the add-on's exact string with as many parameters as
-  the add-on passes, and the filter (case 7) and event data (case 8) listed in
-  the annotation.
-- `AcmeCspFunctionFallbacks`: methods returning `JsFunction` for the
-  functions made from strings: `addJsInitializer` (case 9), `JsFunction.of`
-  (case 10) and `addDynamicImport` (case 11). They need their own interface,
-  since one interface can not mix calls and functions.
+- `AcmeCspFallbacks` (extends `JsInvokers`): calls for the `executeJs`
+  strings (cases 1-4, 6), each `@JsExpression` value the add-on's exact
+  string with as many parameters as the add-on passes, and the filter
+  (case 7) and event data (case 8) listed in the annotation.
+- `AcmeCspFunctionFallbacks` (extends `JsSnippets`): methods returning
+  `JsFunction` for the functions made from strings: `addJsInitializer`
+  (case 9), `JsFunction.of` (case 10) and `addDynamicImport` (case 11). They
+  need their own interface, since one interface can not extend both
+  `JsInvokers` and `JsSnippets`.
 
 Nothing registers them: the build lists them in
 `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.

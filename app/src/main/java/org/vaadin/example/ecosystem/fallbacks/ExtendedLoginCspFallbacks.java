@@ -3,6 +3,7 @@ package org.vaadin.example.ecosystem.fallbacks;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -13,7 +14,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface ExtendedLoginCspFallbacks {
+public interface ExtendedLoginCspFallbacks extends JsInvokers {
 
     @JsExpression("setTimeout(() => {\n  var overlayWrapper = document.getElementById('vaadinLoginOverlayWrapper');\n  if (!overlayWrapper) {\n    var loginOverlay = document.querySelector('vaadin-login-overlay');\n    if (loginOverlay && loginOverlay.shadowRoot) {\n      overlayWrapper = loginOverlay.shadowRoot\n        .querySelector('vaadin-login-overlay-wrapper');\n    }\n  }\n  if (!overlayWrapper) return;\n  var brand = overlayWrapper.shadowRoot ? overlayWrapper.shadowRoot.querySelector('[part=\"brand\"]') : overlayWrapper.querySelector('[part=\"brand\"]');\nif (brand) {\n  brand.replaceChildren();\n}\n\n});\n")
     PendingJavaScriptResult brandClear();

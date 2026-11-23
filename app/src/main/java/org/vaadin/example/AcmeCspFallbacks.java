@@ -3,6 +3,7 @@ package org.vaadin.example;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -26,7 +27,7 @@ import com.vaadin.flow.js.JsStringFallback;
         filters = "event.key === 'Escape'",
         // Case 8: CharCounter
         eventData = "event.target.value.trim().length")
-public interface AcmeCspFallbacks {
+public interface AcmeCspFallbacks extends JsInvokers {
 
     // Case 1: AutoFocus
     @JsExpression("setTimeout(() => this.focus(), 0)")
