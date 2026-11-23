@@ -3,6 +3,7 @@ package org.vaadin.example.ecosystem.fallbacks;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -13,7 +14,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface SuperFieldsCspFallbacks {
+public interface SuperFieldsCspFallbacks extends JsInvokers {
 
     @JsExpression("if(this.inputElement !== undefined) {this.inputElement.inputMode = $0;}")
     PendingJavaScriptResult setTextInputMode(Object arg0);

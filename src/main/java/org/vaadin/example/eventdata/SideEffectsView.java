@@ -1,7 +1,5 @@
 package org.vaadin.example.eventdata;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
@@ -32,7 +30,7 @@ import com.vaadin.flow.router.Route;
 public class SideEffectsView extends VerticalLayout {
 
     @JsDefinition
-    public interface SideJs extends Serializable {
+    public interface SideJs extends JsSnippets {
         @JsExpression("return event.key === $0;")
         DomEventFilter isKey(String key);
 

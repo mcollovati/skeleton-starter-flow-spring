@@ -1,6 +1,5 @@
 package org.vaadin.example.eventdata;
 
-import java.io.Serializable;
 import java.util.List;
 
 import com.vaadin.flow.component.AttachEvent;
@@ -43,7 +42,7 @@ public class EventDataView extends VerticalLayout {
      * {@code $0}, {@code $1}, ...
      */
     @JsDefinition
-    public interface EventJs extends Serializable {
+    public interface EventJs extends JsSnippets {
 
         @JsExpression("return element.getAttribute($0);")
         DomEventData<String> attribute(String name);

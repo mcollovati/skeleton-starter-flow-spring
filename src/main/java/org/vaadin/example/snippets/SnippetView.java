@@ -1,7 +1,5 @@
 package org.vaadin.example.snippets;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
@@ -11,6 +9,7 @@ import com.vaadin.flow.dom.JsFunction;
 import com.vaadin.flow.js.JsFunctionParameterNames;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.CspViolationException;
@@ -30,7 +29,7 @@ public class SnippetView extends VerticalLayout {
      * methods (each returns a {@link JsFunction}).
      */
     @JsDefinition
-    public interface Snippets extends Serializable {
+    public interface Snippets extends JsSnippets {
 
         /** With {@code @JsFunctionParameterNames}: one capture ($0) and one called param. */
         @JsExpression("return $0 + ': ' + value;")
@@ -75,7 +74,7 @@ public class SnippetView extends VerticalLayout {
      * result of invoking the passed function into its own {@code this}.
      */
     @JsDefinition
-    public interface Sink extends Serializable {
+    public interface Sink extends JsInvokers {
         @JsExpression("this.textContent = $0();")
         void show0(JsFunction fn);
 

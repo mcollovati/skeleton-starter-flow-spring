@@ -3,6 +3,7 @@ package org.vaadin.example.ecosystem.fallbacks;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -13,7 +14,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface ChipFieldCspFallbacks {
+public interface ChipFieldCspFallbacks extends JsInvokers {
 
     @JsExpression("this.splice('items', 0, this.items.length);")
     PendingJavaScriptResult clearItems();

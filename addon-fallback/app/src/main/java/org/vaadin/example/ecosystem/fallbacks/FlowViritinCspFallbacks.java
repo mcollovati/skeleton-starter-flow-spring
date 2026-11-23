@@ -3,6 +3,7 @@ package org.vaadin.example.ecosystem.fallbacks;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -12,7 +13,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface FlowViritinCspFallbacks {
+public interface FlowViritinCspFallbacks extends JsInvokers {
 
     @JsExpression("\n$0.querySelector('vaadin-avatar').style.setProperty('--vaadin-avatar-user-color', null);$0.querySelector('vaadin-avatar').setAttribute('has-color-index', true);")
     PendingJavaScriptResult markdownMessageAvatarColor();

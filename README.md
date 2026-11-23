@@ -56,7 +56,9 @@ them refer to the layout of the source branch.
   source branch.
 - Updated to the merged Flow API: `@JsCalledWith` is now
   `@JsFunctionParameterNames` (vaadin/flow#27018), and `OpenInNewTab.onClick`
-  is now `Download.onClick(..., DownloadTarget.NEW_TAB)` (vaadin/flow#27074).
+  is now `Download.onClick(..., DownloadTarget.NEW_TAB)` (vaadin/flow#27074),
+  and every `@JsDefinition` extends `JsInvokers` or `JsSnippets`
+  (vaadin/flow#27152).
 - Not included: `csp-demo` (no own commits), `repro/event-data-bean-decoding`
   (25.3, not CSP), `repro/native-snippet-type-proxy` (Quarkus native) and
   `repro/js-definition-optimize-bundle` (a build-time bundle issue).

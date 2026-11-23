@@ -1,6 +1,5 @@
 package org.vaadin.example.eventdatapath;
 
-import java.io.Serializable;
 import java.util.Optional;
 
 import com.vaadin.flow.component.html.Div;
@@ -31,7 +30,7 @@ import com.vaadin.flow.router.Route;
 public class EventDataElementView extends Div {
 
     @JsDefinition
-    public interface ElementJs extends Serializable {
+    public interface ElementJs extends JsSnippets {
 
         /** The node that was clicked, also inside a shadow root. */
         @JsExpression("return event.composedPath()[0];")

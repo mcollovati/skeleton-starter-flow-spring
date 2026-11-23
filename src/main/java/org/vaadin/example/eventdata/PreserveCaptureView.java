@@ -1,7 +1,5 @@
 package org.vaadin.example.eventdata;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
@@ -30,7 +28,7 @@ import com.vaadin.flow.router.Route;
 public class PreserveCaptureView extends VerticalLayout {
 
     @JsDefinition
-    public interface CaptureJs extends Serializable {
+    public interface CaptureJs extends JsSnippets {
         /** The id of the element, or its tag and text if it has no id. */
         @JsExpression("return $0 === null ? 'null' : ($0.id || ('<' + $0.tagName + '> ' + $0.textContent));")
         DomEventData<String> describe(Element element);

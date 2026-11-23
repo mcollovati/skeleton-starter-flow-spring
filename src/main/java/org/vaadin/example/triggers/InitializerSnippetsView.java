@@ -26,7 +26,7 @@ import com.vaadin.flow.shared.Registration;
 public class InitializerSnippetsView extends Div {
 
     @JsDefinition
-    public interface InitializerJs extends Serializable {
+    public interface InitializerJs extends JsSnippets {
 
         /**
          * Counts each install in the first element and each cleanup in the

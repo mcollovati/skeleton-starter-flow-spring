@@ -3,6 +3,7 @@ package org.vaadin.example.ecosystem.fallbacks;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsStringFallback;
 
 /**
@@ -13,7 +14,7 @@ import com.vaadin.flow.js.JsStringFallback;
  */
 @JsDefinition
 @JsStringFallback
-public interface SortableLayoutCspFallbacks {
+public interface SortableLayoutCspFallbacks extends JsInvokers {
 
     @JsExpression("window.Vaadin.Flow.sortableConnector.initLazy($0, $1, $2)")
     PendingJavaScriptResult initLazy(Object arg0, Object arg1, Object arg2);

@@ -1,7 +1,5 @@
 package org.vaadin.example.components;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.charts.Chart;
 import com.vaadin.flow.component.charts.model.ChartType;
 import com.vaadin.flow.component.charts.model.Configuration;
@@ -41,7 +39,7 @@ public class ChartsDeclaredFunctionView extends VerticalLayout {
     }
 
     @JsDefinition
-    public interface SalesFormatters extends Serializable {
+    public interface SalesFormatters extends JsSnippets {
 
         @JsExpression("return this.y / $0 + $1;")
         ChartFunction scaled(int divisor, String suffix);
