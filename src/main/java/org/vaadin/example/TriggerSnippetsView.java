@@ -8,13 +8,13 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.clipboard.Clipboard;
 import com.vaadin.flow.component.download.Download;
+import com.vaadin.flow.component.download.DownloadTarget;
 import com.vaadin.flow.component.fullscreen.Fullscreen;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Input;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.newtab.OpenInNewTab;
 import com.vaadin.flow.component.trigger.internal.ClickTrigger;
 import com.vaadin.flow.component.trigger.internal.DomEventTrigger;
 import com.vaadin.flow.component.trigger.internal.DoubleClickTrigger;
@@ -107,9 +107,9 @@ public class TriggerSnippetsView extends Div {
                         + "contains \"" + HANDLER_BODY + "\".",
                 d2);
 
-        // N1: OpenInNewTab.onClick with a URL
+        // N1: Download.onClick with a URL and DownloadTarget.NEW_TAB
         NativeButton n1 = button("n1");
-        OpenInNewTab.onClick(n1, "/sample.txt");
+        Download.onClick(n1, "/sample.txt", DownloadTarget.NEW_TAB);
         row("N1 open a URL in a new tab",
                 "Click N1. Expected: sample.txt opens in a new tab.", n1);
 
