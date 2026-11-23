@@ -1,7 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.NativeButton;
@@ -9,6 +7,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.router.Route;
 
 /**
@@ -22,7 +21,7 @@ import com.vaadin.flow.router.Route;
 public class DeclaredJsErrorsView extends Div {
 
     @JsDefinition
-    public interface ErrorJs extends Serializable {
+    public interface ErrorJs extends JsInvokers {
 
         @JsExpression("throw new Error('void-throws')")
         void voidThrows();
