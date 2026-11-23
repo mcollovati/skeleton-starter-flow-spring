@@ -197,10 +197,11 @@ class EventDataPathIT {
         assertThat(result("dom-event")).hasText("detail=1 | id=dom-event");
     }
 
-    // E2
+    // E2: bundled since vaadin/flow#27000, so strict mode accepts it
+    // (before: CspViolationException)
     @Test
-    void domEventExpressionEventData_refusedByStrictMode() {
-        assertOutcome("dom-event-expression", CSP);
+    void domEventExpressionEventData_bundled_accepted() {
+        assertOutcome("dom-event-expression", "OK");
     }
 
     // T1

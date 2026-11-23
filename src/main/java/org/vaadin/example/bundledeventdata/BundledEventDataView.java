@@ -191,8 +191,8 @@ public class BundledEventDataView extends Div {
 
     @SuppressWarnings("deprecation")
     private void notBundled() {
-        // A5: a value mapped to an element is not bundled, so strict mode
-        // still refuses it
+        // A5: a value mapped to an element (bundled since vaadin/flow#27000
+        // was merged; it was refused on the PR head checked first)
         Div probe = new Div();
         setupRow("element-expression",
                 "@EventData(\"event.target.closest('div')\") Element",

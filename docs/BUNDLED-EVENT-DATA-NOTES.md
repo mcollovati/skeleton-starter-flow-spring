@@ -28,7 +28,7 @@ results" list, with the outcome (`OK` or the exception name) in
 | A3 | a template literal, a value ending with a `//` comment, a value on two lines, single and double quotes and a backslash | the values survive the code generation |
 | A4 | `DropEvent` of `flow-dnd` (an event class from a jar), whose offsets are expressions | offsets received |
 | A1-A4 | every bundled value is a function in `window.Vaadin.Flow.jsSnippets` | registered |
-| A5 | `@EventData("event.target.closest('div')") Element`: mapped to an element, so not bundled | `CspViolationException` when the listener is added |
+| A5 | `@EventData("event.target.closest('div')") Element`: mapped to an element | accepted (bundled since d3f860ec38 in the merged PR; `CspViolationException` on PR head 72770395b0) |
 | A6 | the A1 expression through `addEventData(String)` | `CspViolationException`: only `@EventData` uses the bundle |
 
 ## How to run
@@ -74,9 +74,9 @@ backslash and the line break of A3 correctly.
   not only flow-dnd: `MapClickEvent` and `MapClusterClickEvent` (Map) and
   `SplitLayout.SplitterDragEndEvent`. This is expected: the default bundles of
   the platform are built with all components, so they get these functions too.
-- A5 is still refused under strict mode: an expression that maps to an element
-  or component has no CSP-safe form yet, also not through
-  `addEventDataElement(String)`.
+- A5 was refused on PR head 72770395b0. The merged PR (d3f860ec38, "bundle
+  @EventData values mapped to components") bundles it, so on Flow `main` it
+  is accepted. `addEventDataElement(String)` with an expression is still refused.
 
 Not covered: hotswap of a changed `@EventData` value (the PR logs an error and
 sends `null` until a restart), and a missing function in the browser.

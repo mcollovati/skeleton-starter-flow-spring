@@ -26,10 +26,10 @@ class CspViewCspTest extends SpringBrowserlessTest {
     void openingTheViewReportsConstructorAndAttachCode() {
         navigate(CspView.class);
 
-        // addEventData and setFilter in the constructor, executeJs(String)
-        // in onAttach. executeJs(TitleJs.class) is not reported.
+        // setFilter in the constructor, executeJs(String) in onAttach.
+        // executeJs(TitleJs.class) is not reported. addEventData("event.key")
+        // (line 30) is a property path, not compiled since vaadin/flow#26916.
         Assertions.assertEquals(List.of(
-                "CspView.<init>(CspView.java:30)",
                 "CspView.<init>(CspView.java:31)",
                 "CspView.onAttach(CspView.java:39)"), appCallSites());
     }

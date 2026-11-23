@@ -163,10 +163,11 @@ class BundledEventDataIT {
         }
     }
 
-    // A5
+    // A5: bundled since vaadin/flow@d3f860ec38 (in #27000), so strict mode
+    // accepts it (before: CspViolationException)
     @Test
-    void elementExpression_notBundled_refusedByStrictMode() {
-        assertOutcome("element-expression", "CspViolationException");
+    void elementExpression_bundled_accepted() {
+        assertOutcome("element-expression", "OK");
     }
 
     // A6

@@ -301,7 +301,7 @@ public class EventDataPathView extends Div {
 
     /**
      * E1/E2: @EventData values go through the internal helper that replaced
-     * addEventData(List).
+     * addEventData(List). E2 is accepted since vaadin/flow#27000 bundles it.
      */
     private void domEventAnnotation() {
         add(new H3("E1: @DomEvent with path @EventData"));

@@ -80,21 +80,19 @@ The ITs use Playwright and open `http://localhost:8080` (change it with
 
 ## Results on 2026-11-23 (Flow `main` 99a61c1043)
 
-Playwright ITs: 92 of 94 pass. Unit and browserless tests: 11 of 14 pass.
+Playwright ITs: 94 of 94 pass. Unit and browserless tests: 13 of 14 pass.
 
-Failures that are not caused by combining the branches (the source branch
-fails in the same way against the same Flow build, or the notes say so):
+`DelegateOptionsTest` fails on purpose: it reproduces an open bug (see
+`docs/SHORTCUT-NOTES.md`).
 
-| Test | Result | Why |
-|---|---|---|
-| `BundledEventDataIT.elementExpression_notBundled_refusedByStrictMode` | `OK`, expected `CspViolationException` | Flow now runs this expression in strict mode. Same on `repro/bundled-event-data` |
-| `EventDataPathIT.domEventExpressionEventData_refusedByStrictMode` | `OK`, expected `CspViolationException` | Same. Same on `repro/add-event-data-path` |
-| `CspViewCspTest.openingTheViewReportsConstructorAndAttachCode` | `addEventData` (line 30) is no longer reported | Flow reads event data property paths without compiling them (vaadin/flow#26916) |
-| `SkeletonViewCspTest.skeletonViewHasNoApplicationViolations` | no Vaadin violations at all | Flow and `Button` no longer send string JavaScript in this view. In strict mode `new UI()` also works now, so step 3 of `docs/CSP-BROWSERLESS.md` is out of date |
-| `DelegateOptionsTest` | fails | open bug, see `docs/SHORTCUT-NOTES.md` |
+Four assertions were updated to Flow `main`, because Flow changed after the
+source branch was tested (the notes in `docs/` say what changed):
 
-The tests are not changed, so they still show the result from the time of
-the source branch.
+- `BundledEventDataIT` A5 and `EventDataPathIT` E2: the expression is now
+  bundled (vaadin/flow#27000), so strict mode accepts it.
+- `CspViewCspTest`: `addEventData("event.key")` is a property path and is
+  not compiled since vaadin/flow#26916.
+- `SkeletonViewCspTest`: the view reaches no string JavaScript at all.
 
 Not checked here: the login and logout cases of `executejs` (no automated
 test), and `addon-fallback/` (needs a build of PR #27128).

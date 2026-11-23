@@ -7,6 +7,16 @@ work under a strict Content Security Policy?
 Based on `v25.4` of the skeleton (Vaadin 25.4.0-alpha5, the first version with
 the `csp` setting and the string JavaScript reporter).
 
+## Update on Flow main (2026-11-23, repro/csp-all)
+
+- `addEventData("event.key")` (`CspView` line 30) is no longer reported: a
+  property path is not compiled since vaadin/flow#26916.
+- The skeleton view reaches no string JavaScript at all, also not from Flow
+  or `Button`. `SkeletonViewCspTest` now checks that the report is empty.
+- `new UI()` works in strict mode, so step 3 below no longer fails.
+
+The rest of this file describes 25.4.0-alpha5.
+
 ## Short answer
 
 - **warn: yes, with a filter.** Every server-side call that sends JavaScript

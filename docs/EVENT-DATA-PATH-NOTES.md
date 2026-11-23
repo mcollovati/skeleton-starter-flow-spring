@@ -47,7 +47,7 @@ results" list, with the outcome (`OK` or the exception name) in
 | D1/D2 | deprecated `addEventData(String)` / `addEventDataElement(String)` with paths | still work |
 | D3/D4 | deprecated methods with expressions | `CspViolationException` (strict mode, as before the PR) |
 | E1 | `@DomEvent` with path `@EventData` values (now added through `ElementListenerMap.addEventData`) | works |
-| E2 | `@DomEvent` with `@EventData("event.detail + 1")` | `CspViolationException` when the listener is added |
+| E2 | `@DomEvent` with `@EventData("event.detail + 1")` | accepted since vaadin/flow#27000 (bundled). Before #27000: `CspViolationException` when the listener is added |
 | T1 | `preventDefault()` on a link | listener runs, the link is not followed |
 | T2 | `stopPropagation()` on an inner button | the outer listener is not called, but is for a click on the outer element |
 | T3 | `synchronizeProperty()` through `addPropertyChangeListener("value", "change", ...)` | value synchronized |
