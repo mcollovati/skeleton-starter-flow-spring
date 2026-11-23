@@ -21,7 +21,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <vaadin.version>25.4.0-beta1</vaadin.version>
+        <vaadin.version>25.4-SNAPSHOT</vaadin.version>
     </properties>
 
     <parent>
@@ -69,12 +69,22 @@
     <dependencyManagement>
         <dependencies>
             <!-- Prototype of vaadin/flow#26153 (branch csp-addon-fallback):
-                 the Flow modules are snapshots, everything else is
-                 ${vaadin.version}. Imported first, so it wins over the
-                 Flow versions that vaadin-bom brings. -->
+                 the Flow modules come from a local install of that branch.
+                 Imported first, so it wins over the Flow versions that
+                 vaadin-bom brings. -->
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>flow-bom</artifactId>
+                <version>25.4-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- The vaadin-bom snapshot still names 25.4.0-beta2 for the
+                 components. Those do not extend JsInvokers or JsSnippets
+                 (vaadin/flow#27152), so they fail with the Flow snapshot. -->
+            <dependency>
+                <groupId>com.vaadin</groupId>
+                <artifactId>flow-components-bom</artifactId>
                 <version>25.4-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>

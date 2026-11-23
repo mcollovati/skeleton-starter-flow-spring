@@ -5,7 +5,8 @@ sends JavaScript as strings. The application developer cannot change the
 add-on. This project shows what breaks, as a base for designing a way for the
 application to provide a fallback.
 
-Vaadin 25.4.0-beta1, Spring Boot.
+Vaadin 25.4 snapshots, Spring Boot. Flow comes from a local install of the
+Flow branch `csp-addon-fallback`; see "Fallbacks" below.
 
 ## Modules
 
@@ -46,7 +47,7 @@ browser does not block cases 12 and 13.
 Production mode (shows all cases):
 
 ```
-./mvnw install -DskipTests
+./mvnw -nsu install -DskipTests
 java -jar app/target/app-1.0-SNAPSHOT.jar
 ```
 
@@ -124,19 +125,31 @@ of being refused.
 Nothing registers them: the build lists them in
 `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
 
-The root `pom.xml` imports `flow-bom` 25.4-SNAPSHOT above `vaadin-bom`, so
-all Flow modules are snapshots and everything else is 25.4.0-beta1. Install
-the changed modules and the BOM from the Flow branch first (the other Flow
-modules come from the snapshot repository):
+The root `pom.xml` uses 25.4-SNAPSHOT for everything. It imports three BOMs,
+in this order:
+
+1. `flow-bom`, so the Flow modules win over the ones `vaadin-bom` names.
+2. `flow-components-bom`, because the `vaadin-bom` snapshot still names the
+   25.4.0-beta2 components. They do not extend `JsInvokers` or `JsSnippets`
+   (vaadin/flow#27152), so they fail with the Flow snapshot.
+3. `vaadin-bom`.
+
+Install the changed modules and the BOM from the Flow branch first. The other
+Flow modules come from the snapshot repository:
 
 ```
-mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-server
+mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-server,flow-plugins,flow-plugins/flow-plugin-base,flow-plugins/flow-maven-plugin
 ```
+
+Then build this project with `-nsu` (`./mvnw -nsu ...`). Without it, Maven
+can take a Flow snapshot from the repository that is newer than your install,
+and the fallbacks are refused.
 
 Results on 2026-11-19:
 
 - Browser tests, strict, production mode: 16 of 16 pass (checked again on
-  2026-11-20). Cases 5, 12 and 13 are not supported, so their tests assert
+  2026-11-20, and on 2026-11-23 with the snapshots). Cases 5, 12 and 13 are
+  not supported, so their tests assert
   the failure instead: case 5 is refused in Java (the string changes with the
   color) and the message says that `@JsStringFallback` does not support it;
   cases 12 and 13 are blocked by the browser.
@@ -165,15 +178,18 @@ https://github.com/vaadin/flow/issues/26153#issuecomment-7035443652.
 Run only these tests (production mode, `vaadin.csp=strict`):
 
 ```
-./mvnw install -DskipTests
-./mvnw -Pit verify -pl app -Dit.test=EcosystemCspIT
+./mvnw -nsu install -DskipTests
+./mvnw -nsu -Pit verify -pl app -Dit.test=EcosystemCspIT
 ```
 
 With the application running, each view opens at
 `http://localhost:8080/eco/<path>`.
 
-Results on 2026-11-20 (Vaadin 25.4.0-beta1, Flow branch
-`csp-addon-fallback`): 17 of 21 tests pass.
+Results on 2026-11-23 (Vaadin 25.4 snapshots, components built on 2026-11-23
+with the markers from vaadin/flow#27152, Flow branch `csp-addon-fallback` at
+`ebe75200a7`): 18 of 21 tests pass. On 2026-11-20 (25.4.0-beta1) 17 passed:
+chat-assistant failed because `connect-src` had no `data:`, which
+vaadin/flow#27142 fixed.
 
 | Add-on | Version | View (source · URL) | What the test does | Fallbacks | Result |
 |---|---|---|---|---|---|
@@ -191,7 +207,7 @@ Results on 2026-11-20 (Vaadin 25.4.0-beta1, Flow branch
 | zoomist-addon | 1.3.0 | [`ZoomistView`](app/src/main/java/org/vaadin/example/ecosystem/ZoomistView.java) · [/eco/zoomist](http://localhost:8080/eco/zoomist) | getContainerData | [`ZoomistCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ZoomistCspFallbacks.java) | pass |
 | xterm-console | 3.3.0 | [`XTermView`](app/src/main/java/org/vaadin/example/ecosystem/XTermView.java) · [/eco/xterm](http://localhost:8080/eco/xterm) | writeln | [`XTermConsoleCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/XTermConsoleCspFallbacks.java) | pass |
 | year-month-calendar | 4.6.2 | [`YearMonthCalendarView`](app/src/main/java/org/vaadin/example/ecosystem/YearMonthCalendarView.java) · [/eco/year-month-calendar](http://localhost:8080/eco/year-month-calendar) | class name generator | [`YearMonthCalendarCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/YearMonthCalendarCspFallbacks.java) | pass |
-| chat-assistant-addon | 5.2.0 | [`ChatAssistantView`](app/src/main/java/org/vaadin/example/ecosystem/ChatAssistantView.java) · [/eco/chat-assistant](http://localhost:8080/eco/chat-assistant) | open the chat window with a message | [`ChatAssistantCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ChatAssistantCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | fail: all strings match, but `connect-src` has no `data:`, so `vaadin-icon` can not load a `data:` icon |
+| chat-assistant-addon | 5.2.0 | [`ChatAssistantView`](app/src/main/java/org/vaadin/example/ecosystem/ChatAssistantView.java) · [/eco/chat-assistant](http://localhost:8080/eco/chat-assistant) | open the chat window with a message | [`ChatAssistantCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ChatAssistantCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | pass (failed on 2026-11-20: `connect-src` had no `data:` for the `vaadin-icon` icon, fixed by vaadin/flow#27142) |
 | extended-login | 1.1.0 | [`ExtendedLoginView`](app/src/main/java/org/vaadin/example/ecosystem/ExtendedLoginView.java) · [/eco/extended-login](http://localhost:8080/eco/extended-login) | replaced header, no forgot password link | [`ExtendedLoginCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ExtendedLoginCspFallbacks.java) | pass |
 | chipfield-addon | 2.8.0 | [`ChipFieldView`](app/src/main/java/org/vaadin/example/ecosystem/ChipFieldView.java) · [/eco/chipfield](http://localhost:8080/eco/chipfield) | chips for the value | [`ChipFieldCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ChipFieldCspFallbacks.java) | pass |
 | orgchart-addon | 5.4.0 | [`OrgChartView`](app/src/main/java/org/vaadin/example/ecosystem/OrgChartView.java) · [/eco/orgchart](http://localhost:8080/eco/orgchart) | chart shown, add a child | [`OrgChartCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/OrgChartCspFallbacks.java) | pass |
