@@ -1,6 +1,6 @@
 package org.vaadin.example;
 
-import com.vaadin.flow.js.JsCalledWith;
+import com.vaadin.flow.js.JsFunctionParameterNames;
 import com.vaadin.flow.js.JsSnippet;
 
 /**
@@ -8,6 +8,6 @@ import com.vaadin.flow.js.JsSnippet;
  * with a JDK proxy when a definition method returns it, and a native image
  * can only create a proxy that was registered at build time.
  */
-@JsCalledWith({ "name" })
+@JsFunctionParameterNames({ "name" })
 public interface Greeting extends JsSnippet {
 }
