@@ -1,7 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
-
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.button.Button;
@@ -13,6 +11,7 @@ import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.dom.JsFunction;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.router.Route;
 
@@ -30,7 +29,7 @@ public class DynamicImportView extends VerticalLayout {
 
     /** The snippets passed to addDynamicImport. */
     @JsDefinition
-    public interface ImportJs extends Serializable {
+    public interface ImportJs extends JsSnippets {
 
         /** The path is a literal, so that the bundler can split it. */
         @JsExpression("return import('Frontend/report-editor/report-editor.js');")
@@ -43,7 +42,7 @@ public class DynamicImportView extends VerticalLayout {
 
     /** A declared call that reports the state of the page into this. */
     @JsDefinition
-    public interface StatusJs extends Serializable {
+    public interface StatusJs extends JsInvokers {
         @JsExpression("this.textContent = 'module evaluated: '"
                 + " + !!window.reportEditorModuleEvaluated"
                 + " + ', report-editor defined: '"
