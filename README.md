@@ -42,18 +42,36 @@ Open http://localhost:8097/ and press the three buttons: each shows `v1`.
 For each interface, change `v1` to `v2` in its `@JsExpression`, run
 `.vaadin/vaadin-dev apply`, reload the page and press the button again.
 
-## Results (2026-11-23, PR branch at c2b211430a)
+To test a redefine without a restart, which is the same path as hotswap
+from an IDE, change the version again, run
+`.vaadin/vaadin-dev apply --no-restart` and then `.vaadin/vaadin-dev apply`.
+The first command only compiles. The second one then only redefines the
+class.
 
-| Changed | What `apply` does | What runs after a reload |
+## Results
+
+### PR branch at e114017dbd (2026-11-23): all fixed
+
+| Changed | Plain `apply` | Redefine without a restart |
 |---|---|---|
-| `PlainParentJs` | redefines without a restart, reports it as live | **old JavaScript**; `src/main/frontend/generated/vaadin-js-definitions.js` keeps the old function; nothing is logged |
-| `AnnotatedParentJs` | restarts ("frontend imports changed") | new JavaScript |
-| `DirectJs` | restarts ("frontend imports changed") | new JavaScript |
+| `PlainParentJs` | restarts ("frontend imports changed"), new JavaScript | file written again, Vite HMR update, new JavaScript |
+| `AnnotatedParentJs` | restarts, new JavaScript | not tested |
+| `DirectJs` | restarts, new JavaScript | file written again, Vite HMR update, new JavaScript |
 
-`JsDefinitionHotswapper` and `DevLoopRedefiner` only handle changed classes
-that have `@JsDefinition`. `PlainParentJs` has none, and
-`PlainParentChildJs` did not change, so nothing is regenerated and nothing
-restarts.
+After a redefine, `vaadin-js-definitions.js` keeps the old function next
+to the new one. This is on purpose: a browser that has the file may still
+call it, and the next build removes it.
+
+### Earlier results
+
+- c2b211430a: changing `PlainParentJs` was redefined without a restart and
+  reported as live, but the old JavaScript kept running and nothing was
+  logged. `JsDefinitionHotswapper` and `DevLoopRedefiner` only handled
+  changed classes with `@JsDefinition`. Fixed in faa7a182ed and cbcaa294ab.
+- 4927686f45: a plain `apply` restarted and worked, but a redefine without a
+  restart still ran the old JavaScript. `Class.getMethods()` of
+  `PlainParentChildJs` kept the methods from before the parent was
+  redefined, with the old `@JsExpression`. Fixed in 2b814554fc.
 
 Run `.vaadin/vaadin-dev shutdown` when done, and remove `.vaadin`, `.agents`
 and `.claude`.
