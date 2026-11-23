@@ -1,59 +1,53 @@
 package org.vaadin.example;
 
-import com.vaadin.flow.component.Key;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Route;
 
 /**
- * A sample Vaadin view class.
- * <p>
- * To implement a Vaadin view just extend any Vaadin component and use @Route
- * annotation to announce it in a URL as a Spring managed bean.
- * <p>
- * A new instance of this class is created for every new user and every browser
- * tab/window.
- * <p>
- * The main view contains a text field for getting the user name and a button
- * that shows a greeting message in a notification.
+ * Calls a method that a {@code @JsDefinition} interface inherits from its
+ * parent. Change the expression in the parent, apply with the dev loop and
+ * press the button again: the text shows which version of the JavaScript ran.
+ * Only Flow HTML components are used, since the Vaadin components of the
+ * release are built against the released Flow API.
  */
-@Route
-public class MainView extends VerticalLayout {
+@Route("")
+public class MainView extends Div {
 
-    /**
-     * Construct a new Vaadin view.
-     * <p>
-     * Build the initial UI state for the user accessing the application.
-     *
-     * @param service
-     *            The message service. Automatically injected Spring managed bean.
-     */
-    public MainView(GreetService service) {
+    public MainView() {
+        add(new H3("Hotswap of a JavaScript definition parent"));
+        add(new Paragraph("Edit the @JsExpression in PlainParentJs or"
+                + " AnnotatedParentJs (v1 -> v2), apply, then press the"
+                + " button again."));
 
-        // Use TextField for standard text input
-        TextField textField = new TextField("Your name");
-        textField.addClassName("bordered");
+        Span plain = new Span("not run");
+        plain.setId("plain-result");
+        NativeButton plainButton = new NativeButton(
+                "Run PlainParentChildJs.show",
+                e -> plain.getElement().executeJs(PlainParentChildJs.class)
+                        .show("clicked"));
+        plainButton.setId("plain");
 
-        // Button click listeners can be defined as lambda expressions
-        Button button = new Button("Say hello", e -> {
-            add(new Paragraph(service.greet(textField.getValue())));
-        });
+        Span annotated = new Span("not run");
+        annotated.setId("annotated-result");
+        NativeButton annotatedButton = new NativeButton(
+                "Run AnnotatedParentChildJs.show",
+                e -> annotated.getElement()
+                        .executeJs(AnnotatedParentChildJs.class)
+                        .show("clicked"));
+        annotatedButton.setId("annotated");
 
-        // Theme variants give you predefined extra styles for components.
-        // Example: Primary button has a more prominent look.
-        button.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        Span direct = new Span("not run");
+        direct.setId("direct-result");
+        NativeButton directButton = new NativeButton("Run DirectJs.show",
+                e -> direct.getElement().executeJs(DirectJs.class)
+                        .show("clicked"));
+        directButton.setId("direct");
 
-        // You can specify keyboard shortcuts for buttons.
-        // Example: Pressing enter in this view clicks the Button.
-        button.addClickShortcut(Key.ENTER);
-
-        // Use custom CSS classes to apply styling. This is defined in
-        // styles.css.
-        addClassName("centered-content");
-
-        add(textField, button);
+        add(new Div(plainButton, plain), new Div(annotatedButton, annotated));
+        add(new Div(directButton, direct));
     }
 }

@@ -66,6 +66,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Flow from the branch of vaadin/flow#27152 (JsInvokers and
+                 JsSnippets markers), installed locally. Imported first, so it
+                 wins over the Flow versions that vaadin-bom brings. -->
+            <dependency>
+                <groupId>com.vaadin</groupId>
+                <artifactId>flow-bom</artifactId>
+                <version>25.4-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>vaadin-bom</artifactId>
