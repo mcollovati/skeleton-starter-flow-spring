@@ -1,7 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +22,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.js.JsDefinition;
 import com.vaadin.flow.js.JsExpression;
+import com.vaadin.flow.js.JsInvokers;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.CspViolationException;
 
@@ -70,7 +69,7 @@ public class ChartsCspView extends VerticalLayout {
      * applies the options right after it.
      */
     @JsDefinition
-    interface ChartFunctionsJs extends Serializable {
+    interface ChartFunctionsJs extends JsInvokers {
 
         @JsExpression(DATA_LABEL_FORMATTER_SCRIPT)
         void applyDataLabelFormatter();
@@ -222,7 +221,7 @@ public class ChartsCspView extends VerticalLayout {
                 chart. The function is not part of the configuration on the \
                 server, so getFormatter() does not return it."""), code("""
                 @JsDefinition
-                interface ChartFunctionsJs extends Serializable {
+                interface ChartFunctionsJs extends JsInvokers {
 
                     @JsExpression(\"""
                 """ + DATA_LABEL_FORMATTER_SCRIPT.indent(12) + """

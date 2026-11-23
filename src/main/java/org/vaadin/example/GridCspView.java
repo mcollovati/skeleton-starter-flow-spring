@@ -1,6 +1,5 @@
 package org.vaadin.example;
 
-import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -47,7 +46,7 @@ public class GridCspView extends VerticalLayout {
 
     /** An application template, declared like the built-in ones. */
     @JsDefinition
-    public interface PersonTemplates extends Serializable {
+    public interface PersonTemplates extends JsSnippets {
 
         /**
          * A badge with the status of the person and a capture ($0) for the
