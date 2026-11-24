@@ -12,7 +12,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <vaadin.version>25.4.0-alpha4</vaadin.version>
+        <vaadin.version>25.4-SNAPSHOT</vaadin.version>
     </properties>
 
     <parent>
@@ -79,8 +79,10 @@
     <dependencies>
         <dependency>
             <groupId>com.vaadin</groupId>
-            <!-- Replace artifactId with vaadin-core to use only free components -->
-            <artifactId>vaadin</artifactId>
+            <!-- Only the free components: the application has fewer JavaScript
+                 definitions than the pre-built bundles. The all-components
+                 profile adds the commercial ones. -->
+            <artifactId>vaadin-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
@@ -135,6 +137,71 @@
     </build>
 
     <profiles>
+        <!-- All components, as the pre-built bundles have -->
+        <profile>
+            <id>all-components</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.vaadin</groupId>
+                    <artifactId>vaadin</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- A view with a JavaScript definition of the application, which no
+             pre-built bundle carries -->
+        <profile>
+            <id>app-definition</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-app-definition</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/app-definition/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- A view with a JavaScript definition that declares the same
+             JavaScript as IFrame.ReloadJs, so the two share one function under
+             different names -->
+        <profile>
+            <id>shared-function</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-shared-function</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/shared-function/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>it</id>
             <build>
