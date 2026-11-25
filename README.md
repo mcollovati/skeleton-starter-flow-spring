@@ -1,18 +1,18 @@
 # Add-on CSP fallback reproducer (vaadin/flow#26153)
 
-An application runs with `vaadin.csp=strict` and uses a third-party add-on that
+An application runs with `vaadin.contentSecurityPolicy=strict` and uses a third-party add-on that
 sends JavaScript as strings. The application developer cannot change the
 add-on. This project shows what breaks, as a base for designing a way for the
 application to provide a fallback.
 
-Vaadin 25.4 snapshots, Spring Boot. Flow comes from a local install of the
+Vaadin snapshots (Flow and components 25.5, the rest 25.4), Spring Boot. Flow comes from a local install of the
 Flow branch `csp-addon-fallback`; see "Fallbacks" below.
 
 ## Modules
 
 - `addon` (`com.acme.addon`): stands for an add-on from the Directory. Each
   class uses one feature that strict CSP refuses.
-- `app` (`org.vaadin.example`): uses the add-on. `vaadin.csp=strict` is set in
+- `app` (`org.vaadin.example`): uses the add-on. `vaadin.contentSecurityPolicy=strict` is set in
   `app/src/main/resources/application.properties`.
 
 ## Cases
@@ -59,17 +59,17 @@ Development mode (cases 1-11 only):
 ```
 
 Open http://localhost:8080/ and press "Run" on each case. The view catches
-`CspViolationException` only to show the result in place.
+`ContentSecurityPolicyViolationException` only to show the result in place.
 http://localhost:8080/plain uses `AutoFocus` the normal way and shows the
 error page.
 
-To see what `warn` reports, add `-Dvaadin.csp=warn`: every case works, and the
+To see what `warn` reports, add `-Dvaadin.contentSecurityPolicy=warn`: every case works, and the
 log has one warning per string call with the add-on class in the stack trace.
 The warning does not include the JavaScript text.
 
 ## Results (checked 2026-11-19, production jar, Chromium)
 
-- strict: cases 1-11 `REFUSED in Java: CspViolationException`; case 12 the
+- strict: cases 1-11 `REFUSED in Java: ContentSecurityPolicyViolationException`; case 12 the
   browser logs "Executing inline event handler violates ... script-src";
   case 13 `EvalError`; case 14 works; `/plain` shows the navigation error.
 - warn: all 14 cases work, 11 warnings in the log.
@@ -79,7 +79,7 @@ The warning does not include the JavaScript text.
 `app/src/test/java/org/vaadin/example/AddonCspIT.java` checks each case in
 Chrome (Playwright for Java, using the installed Chrome; nothing is
 downloaded). Every test asserts that its case **works**: no
-`CspViolationException` in Java, the effect is visible in the browser, and no
+`ContentSecurityPolicyViolationException` in Java, the effect is visible in the browser, and no
 CSP violation is reported. So the report is the list of what works (passed)
 and what does not (failed, with the reason). The build fails as long as one
 case does not work.
@@ -125,7 +125,9 @@ of being refused.
 Nothing registers them: the build lists them in
 `META-INF/VAADIN/config/js-string-fallbacks.json`, which the server reads.
 
-The root `pom.xml` uses 25.4-SNAPSHOT for everything. It imports three BOMs,
+The root `pom.xml` uses 25.5-SNAPSHOT for Flow and the components (the
+Flow branch is merged with main, which is 25.5) and 25.4-SNAPSHOT for the
+rest. It imports three BOMs,
 in this order:
 
 1. `flow-bom`, so the Flow modules win over the ones `vaadin-bom` names.
@@ -175,7 +177,7 @@ was pasted from the message that Flow printed for the refused call; only some
 method names were changed. The review of all 31 add-ons is in
 https://github.com/vaadin/flow/issues/26153#issuecomment-7035443652.
 
-Run only these tests (production mode, `vaadin.csp=strict`):
+Run only these tests (production mode, `vaadin.contentSecurityPolicy=strict`):
 
 ```
 ./mvnw -nsu install -DskipTests
@@ -184,6 +186,12 @@ Run only these tests (production mode, `vaadin.csp=strict`):
 
 With the application running, each view opens at
 `http://localhost:8080/eco/<path>`.
+
+Checked again on 2026-11-25 with Flow 25.5-SNAPSHOT (branch
+`csp-addon-fallback` at `60ebba0e1c`, after vaadin/flow#27076 and the
+`vaadin.contentSecurityPolicy` rename) and flow-components 25.5-SNAPSHOT:
+the same 18 of 21 tests pass, with the same 3 failures, and 16 of 16 case
+tests pass.
 
 Results on 2026-11-23 (Vaadin 25.4 snapshots, components built on 2026-11-23
 with the markers from vaadin/flow#27152, Flow branch `csp-addon-fallback` at
@@ -198,9 +206,9 @@ vaadin/flow#27142 fixed.
 | ckeditor-vaadin | 6.1.0 | [`CkEditorView`](app/src/main/java/org/vaadin/example/ecosystem/CkEditorView.java) · [/eco/ckeditor](http://localhost:8080/eco/ckeditor) | setValue, setReadOnly, insertText | [`VaadinCkEditorCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinCkEditorCspFallbacks.java) | pass |
 | sortable-layout | 3.0.1 | [`SortableLayoutView`](app/src/main/java/org/vaadin/example/ecosystem/SortableLayoutView.java) · [/eco/sortable](http://localhost:8080/eco/sortable) | drag C above A | [`SortableLayoutCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SortableLayoutCspFallbacks.java) | pass |
 | hugerte-for-flow | 2.3.0 | [`HugeRteView`](app/src/main/java/org/vaadin/example/ecosystem/HugeRteView.java) · [/eco/hugerte](http://localhost:8080/eco/hugerte) | set the old value again after typing | [`HugeRteCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/HugeRteCspFallbacks.java) | pass |
-| superfields | 0.21.2 | [`SuperFieldsView`](app/src/main/java/org/vaadin/example/ecosystem/SuperFieldsView.java) · [/eco/superfields](http://localhost:8080/eco/superfields) | read-only GridSelect, SuperTextField input mode | [`SuperFieldsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SuperFieldsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (input mode), also with `vaadin.csp=off` |
+| superfields | 0.21.2 | [`SuperFieldsView`](app/src/main/java/org/vaadin/example/ecosystem/SuperFieldsView.java) · [/eco/superfields](http://localhost:8080/eco/superfields) | read-only GridSelect, SuperTextField input mode | [`SuperFieldsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SuperFieldsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (input mode), also with `vaadin.contentSecurityPolicy=off` |
 | superfields | 0.21.2 | [`SuperFieldsMultiView`](app/src/main/java/org/vaadin/example/ecosystem/SuperFieldsMultiView.java) · [/eco/superfields-multi](http://localhost:8080/eco/superfields-multi) | GridMultiSelect (element as `$0`) | [`SuperFieldsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/SuperFieldsCspFallbacks.java) | pass |
-| enhanced-tabs-addon | 1.2.2 | [`EnhancedTabsView`](app/src/main/java/org/vaadin/example/ecosystem/EnhancedTabsView.java) · [/eco/enhanced-tabs](http://localhost:8080/eco/enhanced-tabs) | pick a tab in the overflow menu | [`EnhancedTabsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/EnhancedTabsCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (menu), also with `vaadin.csp=off` |
+| enhanced-tabs-addon | 1.2.2 | [`EnhancedTabsView`](app/src/main/java/org/vaadin/example/ecosystem/EnhancedTabsView.java) · [/eco/enhanced-tabs](http://localhost:8080/eco/enhanced-tabs) | pick a tab in the overflow menu | [`EnhancedTabsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/EnhancedTabsCspFallbacks.java), [`VaadinComponentsCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/VaadinComponentsCspFallbacks.java) | fail: add-on bug on Vaadin 25 (menu), also with `vaadin.contentSecurityPolicy=off` |
 | twincolgrid | 4.0.1 | [`TwinColGridView`](app/src/main/java/org/vaadin/example/ecosystem/TwinColGridView.java) · [/eco/twincolgrid](http://localhost:8080/eco/twincolgrid) | no selection column, click a row and add it | [`TwinColGridCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/TwinColGridCspFallbacks.java) | pass |
 | markdown-editor-addon | 2.0.3 | [`MarkdownViewerView`](app/src/main/java/org/vaadin/example/ecosystem/MarkdownViewerView.java) · [/eco/markdown](http://localhost:8080/eco/markdown) | MarkdownViewer shown and removed | [`MarkdownEditorCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/MarkdownEditorCspFallbacks.java) | pass |
 | image-crop-addon | 1.3.0 | [`ImageCropView`](app/src/main/java/org/vaadin/example/ecosystem/ImageCropView.java) · [/eco/image-crop](http://localhost:8080/eco/image-crop) | setCrop draws the selection | [`ImageCropCspFallbacks`](app/src/main/java/org/vaadin/example/ecosystem/fallbacks/ImageCropCspFallbacks.java) | pass |

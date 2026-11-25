@@ -29,10 +29,10 @@ import com.microsoft.playwright.options.Position;
 
 /**
  * Checks, add-on by add-on, whether real add-ons from the Vaadin Directory
- * work in the application that runs with {@code vaadin.csp=strict}, with the
+ * work in the application that runs with {@code vaadin.contentSecurityPolicy=strict}, with the
  * fallbacks in {@code org.vaadin.example.ecosystem.fallbacks}.
  * <p>
- * Every test asserts that the add-on WORKS: no {@code CspViolationException}
+ * Every test asserts that the add-on WORKS: no {@code ContentSecurityPolicyViolationException}
  * in Java (shown in {@code #message}), the effect of the add-on is visible in
  * the browser, and the page reports no Content Security Policy violation and
  * logs no error. So failures list what still breaks. The maplibre test is the

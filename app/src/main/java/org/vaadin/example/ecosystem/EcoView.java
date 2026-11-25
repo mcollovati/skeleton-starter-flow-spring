@@ -6,7 +6,7 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.function.SerializableRunnable;
-import com.vaadin.flow.server.CspViolationException;
+import com.vaadin.flow.server.ContentSecurityPolicyViolationException;
 
 /**
  * Base of the views that use one real add-on each. A call to the add-on that
@@ -33,7 +33,7 @@ public abstract class EcoView extends Div {
     protected void run(SerializableRunnable call) {
         try {
             call.run();
-        } catch (CspViolationException e) {
+        } catch (ContentSecurityPolicyViolationException e) {
             String text = message.getText();
             message.setText((text.isEmpty() ? "" : text + "\n\n")
                     + "REFUSED in Java: " + e.getMessage());

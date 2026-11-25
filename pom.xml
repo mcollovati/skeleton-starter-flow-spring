@@ -6,7 +6,7 @@
     <!--
       Reproducer for vaadin/flow#26153: a third-party add-on that sends
       JavaScript as strings, used by an application that runs with
-      vaadin.csp=strict.
+      vaadin.contentSecurityPolicy=strict.
     -->
     <groupId>com.example</groupId>
     <artifactId>addon-csp-fallback</artifactId>
@@ -75,7 +75,7 @@
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>flow-bom</artifactId>
-                <version>25.4-SNAPSHOT</version>
+                <version>25.5-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -85,7 +85,7 @@
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>flow-components-bom</artifactId>
-                <version>25.4-SNAPSHOT</version>
+                <version>25.5-SNAPSHOT</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

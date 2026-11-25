@@ -28,9 +28,9 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
 /**
  * Checks, case by case, whether each feature of the ACME add-on works in the
- * application that runs with {@code vaadin.csp=strict}.
+ * application that runs with {@code vaadin.contentSecurityPolicy=strict}.
  * <p>
- * Every test asserts that its case WORKS: no {@code CspViolationException} in
+ * Every test asserts that its case WORKS: no {@code ContentSecurityPolicyViolationException} in
  * Java, the effect the add-on promises is visible in the browser, and the page
  * reports no Content Security Policy violation. So the test report reads as
  * a list of what works (passed) and what does not (failed, with the reason in
