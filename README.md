@@ -1,3 +1,83 @@
+# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078)
+
+This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
+(`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
+an IT for a definition that is really missing. It checks that the production build with
+`optimizeBundle` (the default of `build-frontend`) still carries the
+`@JsStringFallback` interfaces of the application. Nothing in the
+application refers to them: Flow finds them by the string an add-on sends.
+So the bytecode scanner never reaches them, and vaadin/flow#27077 must keep
+them for another reason.
+
+`UnusedDefinition` has a `@JsDefinition` and a `@DomEvent` with a filter and
+event data. No route reaches it, so with #27077 none of its JavaScript may be
+in the bundle.
+
+## Steps
+
+Install Flow with the change (flow-bom, flow-server, flow-build-tools,
+vaadin-dev-server, flow-client, flow-maven-plugin), then:
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -pl addon
+mvn -Pit verify -pl app
+grep -c 'acme-unused\|AcmeUnusedKey' app/src/main/frontend/generated/vaadin-js-definitions.js
+```
+
+## Results (2026-11-25, strict, production mode)
+
+| Flow | AddonCspIT | `UnusedDefinition` JavaScript in the bundle | Fallback functions in the bundle |
+| --- | --- | --- | --- |
+| main b75785d3d1 | 17 of 17 | yes (3: definition, filter, event data) | yes |
+| #27078 d634b64873 merged with #27077 6602fca52d | 17 of 17 | no (0) | yes (calls, functions, filter and event data) |
+
+With #27077, `js-string-fallbacks.json` lists both fallback interfaces, and
+`jsDefinitionFunctionIds` in `stats.json` has all their ids. In the
+`uses-fix` run below, the server log has no `ERROR` or `WARN` line, so #27078
+does not report the fallbacks or the reached `EnterField` event as missing.
+
+## A definition that is really missing (vaadin/flow#27078)
+
+`com.acme.addon.ReflectedJs` is a `@JsDefinition` that
+`MissingDefinitionView` (`/missing`) loads by its name with `Class.forName`
+and calls through reflection. The scanner can not follow that, so with
+#27077 the bundle does not carry it. The `uses-fix` profile adds
+`UsesFixView` (`/uses-fix`) with `@Uses(ReflectedJs.class)`, the fix that the
+error suggests.
+
+`MissingDefinitionIT` presses the button twice and reads the server log,
+which the `it` profile writes to `app/target/server.log`:
+
+```
+rm -rf app/src/main/bundles
+mvn clean -Pit verify -pl app              # without the fix
+rm -rf app/src/main/bundles
+mvn clean -Pit,uses-fix verify -pl app     # with the fix
+```
+
+Delete `app/src/main/bundles` when you switch: a bundle saved by one run is
+reused by the next. `clean` empties the server log, which is appended to.
+
+| Flow | Profile | Result |
+| --- | --- | --- |
+| #27078 + #27077 | (none) | the call does nothing in the browser, and the browser console shows no error; the server logs one `ERROR` for two calls: `com.acme.addon.ReflectedJs declares JavaScript that was not included when creating the production bundle, so using it fails in the browser. ... If needed add a @Uses(ReflectedJs.class) to a class that the application uses.` |
+| #27078 + #27077 | `uses-fix` | the call works; no `ERROR` or `WARN` in the server log |
+| main b75785d3d1 | (none) | the call works (every definition is collected), so the IT fails on purpose: `Expected: Not marked`, `Received: Marked by ReflectedJs` |
+
+`AddonCspIT` passes 17 of 17 in all three runs.
+
+## Notes
+
+- The fallback calls do not go through `JsDefinitionProxy`, so the runtime
+  check of #27078 does not cover them. That is fine while #27077 always keeps
+  the fallbacks.
+- Merging #27077 into #27078 breaks a test of #27077 (`BundleValidationTest`
+  uses `BundleValidationUtil.JS_DEFINITION_FUNCTION_IDS_STATS_KEY`, which
+  #27078 moved to `BundleUtils`). Main code compiles.
+
+---
+
 # Add-on CSP fallback reproducer (vaadin/flow#26153)
 
 An application runs with `vaadin.contentSecurityPolicy=strict` and uses a third-party add-on that

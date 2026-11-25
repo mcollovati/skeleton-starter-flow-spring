@@ -12,6 +12,11 @@
     <name>Application that uses the ACME add-on with vaadin.contentSecurityPolicy=strict</name>
     <packaging>jar</packaging>
 
+    <properties>
+        <!-- Set to true by the uses-fix profile -->
+        <it.usesFix>false</it.usesFix>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.example</groupId>
@@ -109,6 +114,8 @@
                                     <arguments>
                                         <argument>--server.port=${it.port}</argument>
                                         <argument>--vaadin.contentSecurityPolicy=${it.csp}</argument>
+                                        <!-- MissingDefinitionIT reads the server log -->
+                                        <argument>--logging.file.name=${project.build.directory}/server.log</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -139,8 +146,42 @@
                             <enableAssertions>true</enableAssertions>
                             <systemPropertyVariables>
                                 <it.baseUrl>http://localhost:${it.port}</it.baseUrl>
+                                <it.serverLog>${project.build.directory}/server.log</it.serverLog>
+                                <it.usesFix>${it.usesFix}</it.usesFix>
                             </systemPropertyVariables>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Adds a route with @Uses(ReflectedJs.class), so the production
+             bundle carries the definition that MissingDefinitionView calls
+             through reflection -->
+        <profile>
+            <id>uses-fix</id>
+            <properties>
+                <it.usesFix>true</it.usesFix>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-uses-fix</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/uses-fix/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
