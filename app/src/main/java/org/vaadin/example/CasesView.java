@@ -1,5 +1,7 @@
 package org.vaadin.example;
 
+import java.util.List;
+
 import com.acme.addon.AutoFocus;
 import com.acme.addon.CharCounter;
 import com.acme.addon.ClickReporter;
@@ -26,12 +28,12 @@ import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.CspViolationException;
+import com.vaadin.flow.server.ContentSecurityPolicyViolationException;
 import com.vaadin.flow.server.VaadinService;
 
 /**
  * Each case uses one feature of the ACME add-on. Press "Run" to use it. The
- * view catches {@link CspViolationException} only to show the result in
+ * view catches {@link ContentSecurityPolicyViolationException} only to show the result in
  * place; a real application would get an error instead (see
  * {@link PlainView}).
  */
@@ -39,9 +41,9 @@ import com.vaadin.flow.server.VaadinService;
 public class CasesView extends Div {
 
     public CasesView() {
-        add(new H1("ACME add-on under vaadin.csp="
+        add(new H1("ACME add-on under vaadin.contentSecurityPolicy="
                 + VaadinService.getCurrent().getDeploymentConfiguration()
-                        .getCspMode()));
+                        .getContentSecurityPolicyMode()));
         add(new Paragraph("The add-on (module 'addon') sends JavaScript as "
                 + "strings. The application cannot change its code."));
         add(new Anchor("plain", "Open a view that uses AutoFocus "
@@ -68,16 +70,24 @@ public class CasesView extends Div {
         addCase(4, "Page.executeJs with parameters (PageTitle)",
                 (area) -> PageTitle.setWithBadge(UI.getCurrent(), "Inbox", 3));
         addCase(5, "Concatenated string (Highlighter)", (area) -> {
-            Span first = new Span("orange");
-            Span second = new Span("blue");
-            area.add(first, new Span(" "), second);
-            try {
-                Highlighter.highlight(first, "orange");
-            } catch (CspViolationException ex) {
-                // Go on, so that the same call site sends a second, different
-                // string. Its message says that this is not supported.
+            // Flow takes a call site as "built from changing values" after 5
+            // different strings, so send 5 colors from the same call site.
+            // The message of the last one says that this is not supported.
+            List<String> colors = List.of("orange", "green", "red", "purple",
+                    "blue");
+            for (int i = 0; i < colors.size(); i++) {
+                Span span = new Span(colors.get(i));
+                area.add(span, new Span(" "));
+                if (i == colors.size() - 1) {
+                    Highlighter.highlight(span, colors.get(i));
+                    break;
+                }
+                try {
+                    Highlighter.highlight(span, colors.get(i));
+                } catch (ContentSecurityPolicyViolationException ex) {
+                    // Go on, so that the same call site sends more strings
+                }
             }
-            Highlighter.highlight(second, "blue");
         });
         addCase(6, "Same text, varying parameter count (ConsoleLogger)",
                 (area) -> {
@@ -141,7 +151,7 @@ public class CasesView extends Div {
             try {
                 action.accept(area);
                 status.setText("no error in Java");
-            } catch (CspViolationException ex) {
+            } catch (ContentSecurityPolicyViolationException ex) {
                 status.setText("REFUSED in Java: " + ex.getClass()
                         .getSimpleName());
                 // What Flow says about the call, such as the method to

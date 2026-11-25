@@ -1,6 +1,6 @@
 # Add-on CSP fallback reproducer (vaadin/flow#26153)
 
-An application runs with `vaadin.csp=strict` and uses a third-party add-on that
+An application runs with `vaadin.contentSecurityPolicy=strict` and uses a third-party add-on that
 sends JavaScript as strings. The application developer cannot change the
 add-on. This project shows what breaks, as a base for designing a way for the
 application to provide a fallback.
@@ -11,7 +11,7 @@ Vaadin 25.4.0-beta1, Spring Boot.
 
 - `addon` (`com.acme.addon`): stands for an add-on from the Directory. Each
   class uses one feature that strict CSP refuses.
-- `app` (`org.vaadin.example`): uses the add-on. `vaadin.csp=strict` is set in
+- `app` (`org.vaadin.example`): uses the add-on. `vaadin.contentSecurityPolicy=strict` is set in
   `app/src/main/resources/application.properties`.
 
 ## Cases
@@ -59,17 +59,17 @@ Development mode (cases 1-11 only):
 ```
 
 Open http://localhost:8080/ and press "Run" on each case. The view catches
-`CspViolationException` only to show the result in place.
+`ContentSecurityPolicyViolationException` only to show the result in place.
 http://localhost:8080/plain uses `AutoFocus` the normal way and shows the
 error page.
 
-To see what `warn` reports, add `-Dvaadin.csp=warn`: every case works, and the
+To see what `warn` reports, add `-Dvaadin.contentSecurityPolicy=warn`: every case works, and the
 log has one warning per string call with the add-on class in the stack trace.
 The warning does not include the JavaScript text.
 
 ## Results (checked 2026-11-19, production jar, Chromium)
 
-- strict: cases 1-11 `REFUSED in Java: CspViolationException`; case 12 the
+- strict: cases 1-11 `REFUSED in Java: ContentSecurityPolicyViolationException`; case 12 the
   browser logs "Executing inline event handler violates ... script-src";
   case 13 `EvalError`; case 14 works; `/plain` shows the navigation error.
 - warn: all 14 cases work, 11 warnings in the log.
@@ -79,7 +79,7 @@ The warning does not include the JavaScript text.
 `app/src/test/java/org/vaadin/example/AddonCspIT.java` checks each case in
 Chrome (Playwright for Java, using the installed Chrome; nothing is
 downloaded). Every test asserts that its case **works**: no
-`CspViolationException` in Java, the effect is visible in the browser, and no
+`ContentSecurityPolicyViolationException` in Java, the effect is visible in the browser, and no
 CSP violation is reported. So the report is the list of what works (passed)
 and what does not (failed, with the reason). The build fails as long as one
 case does not work.
@@ -140,7 +140,12 @@ mvn install -DskipTests -pl flow-bom,flow-server,flow-build-tools,vaadin-dev-ser
 Results on 2026-11-19:
 
 - Browser tests, strict, production mode: 17 of 17 pass (2026-11-20, with
-  case 15). Cases 5, 12 and 13 are not supported, so their tests assert the
+  case 15). Again 17 of 17 on 2026-11-25, on the PR head 60ebba0e1c (Flow
+  25.5-SNAPSHOT, after vaadin/flow#27076 and the `vaadin.contentSecurityPolicy`
+  rename). Case 5 now sends 5 colors, because Flow adds the "not supported"
+  note only after 5 different strings from one call site. A prod bundle built
+  without a fallback is rebuilt when the fallback is added ("Detected
+  JavaScript that the bundle does not carry, declared by: ...AcmeCspFallbacks"). Cases 5, 12 and 13 are not supported, so their tests assert the
   failure instead: case 5 is refused in Java (the string changes with the
   color) and the message says that `@JsStringFallback` does not support it;
   cases 12 and 13 are blocked by the browser.
