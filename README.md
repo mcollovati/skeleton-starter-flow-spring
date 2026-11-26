@@ -168,6 +168,27 @@ mvn clean -Pit,uses-fix verify -pl app
   @Uses(ReflectedShorthandJs.class) ...`. With `uses-fix` the call works and
   the server log has no `ERROR` or `WARN` line.
 
+### Control: main without #27441 (2026-11-26, 2f4cede19d, the PR base)
+
+`ShorthandIT` fails 12 of 14, with and without `uses-fix`. The other 19
+tests pass. Only R2 and R3 pass, because they are refused on both builds.
+
+- S1-S8: `executeJs(BoxJs.class)` is refused in Java:
+  `com.acme.addon.ShorthandBox$BoxJs declares no JavaScript to run for
+  append, setAttribute, getAttribute, hasAttribute, focus, toggleAttribute,
+  toggleAttribute. Annotate every method with @JsExpression`. S7 fails too,
+  although `mark` is annotated, since the whole interface is refused.
+- S9: the typo is refused in Java the same way, so the browser is never
+  reached.
+- R1: refused, but with the old message, so the expected text does not match.
+- The build logs `Leaving the JavaScript of ... out of the bundle` for
+  `BoxJs`, `SubBoxJs`, `TypoJs` and `ReflectedShorthandJs`, so the bundle
+  check fails (`this.append(...$0)` is missing).
+- `/missing-shorthand`: the call fails in Java
+  (`DefaultErrorHandler: Unexpected error: com.acme.addon.ReflectedShorthandJs
+  declares no JavaScript to run for replaceChildren ...`), not with the
+  #27078 bundle error, and the result text stays empty.
+
 Not covered here: hotswap and the dev loop (see `repro/js-definition-hierarchy-hotswap`),
 and a `@JsStringFallback` interface with a method without `@JsExpression`.
 
