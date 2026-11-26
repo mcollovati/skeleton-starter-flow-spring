@@ -213,6 +213,8 @@
                                     <arguments>
                                         <argument>--server.port=${it.port}</argument>
                                         <argument>--vaadin.contentSecurityPolicy=${it.csp}</argument>
+                                        <!-- Kept to read the bundle check errors of vaadin/flow#27078 -->
+                                        <argument>--logging.file.name=${project.build.directory}/server.log</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

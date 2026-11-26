@@ -1,3 +1,70 @@
+# Ecosystem add-ons with the optimized bundle (vaadin/flow#27077, #27078)
+
+This branch is `repro/addon-csp-fallback-ecosystem` with one change: the `it`
+profile writes the server log to `app/target/server.log`, to read the errors
+of #27078. It checks the real add-ons and their string fallbacks with
+#27077 (an optimized production bundle carries only the JavaScript
+definitions that the bytecode scanner reaches, and always the
+`@JsStringFallback` interfaces) and #27078 (an error in the server log when
+a definition the application uses is missing from the bundle).
+
+## Steps
+
+Install Flow with the change (flow-bom, flow-server, flow-build-tools,
+vaadin-dev-server, flow-client, flow-maven-plugin), then:
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -pl addon
+mvn clean -Pit verify -pl app
+grep -E ' (ERROR|WARN) ' app/target/server.log
+```
+
+Use flow-components `25.5-SNAPSHOT` jars from the same build. With the jars
+of 2026-11-24 mixed with newer ones, `package.json` asked for
+`25.4.0-beta1` for some web components and `25.4.0-beta2` for others. npm
+then put `@vaadin/custom-field` under `@vaadin/react-components/node_modules`
+only, and Vite failed with `Rolldown failed to resolve import
+"@vaadin/custom-field/src/vaadin-custom-field.js"`. This happened with Flow
+main too, so it is not caused by #27077 or #27078. With the jars of
+2026-11-26 (all `25.4.0-beta2`) the build works. Delete `app/node_modules`
+and `app/package-lock.json` after you update the jars.
+
+## Results (2026-11-26, strict, production mode)
+
+Flow components `25.5-SNAPSHOT` of 2026-11-26 07:18 in both runs.
+
+| Flow | EcosystemCspIT | AddonCspIT | Server log | Function ids in the bundle |
+| --- | --- | --- | --- | --- |
+| main b75785d3d1 | 18 of 21 | 16 of 16 | only the expected maplibre error | 253 |
+| #27078 e68a80763a (contains #27077 6602fca52d) | 18 of 21 | 16 of 16 | only the expected maplibre error, no #27078 error | 198 |
+
+- The same 3 tests fail in both runs, as before: superfields and
+  enhanced-tabs (add-on bugs on Vaadin 25, also with
+  `vaadin.contentSecurityPolicy=off`) and fullcalendar default (the add-on's
+  own client uses `new Function`). The maplibre test expects its view to be
+  refused, so its navigation error is expected.
+- `js-string-fallbacks.json` is the same in both runs (all 18 fallback
+  interfaces), and all their functions are in the bundle.
+- #27077 leaves out 55 function ids and adds none. They all belong to
+  classes that no view reaches: collaboration engine `BeaconHandlerJs`,
+  field highlighter, AI form field marker, combo box, crud, dashboard, drag
+  and drop, grid pro, map, `IFrame.ReloadJs`, notification, rich text
+  editor, split layout, `TabsJs`, time picker, tree grid, upload. For the
+  components that have a JavaScript module, that module is not in the bundle
+  either, so `@JsModule` reachability gives the same result.
+- Checked cases where an add-on refers to one of these components:
+  - chat-assistant uses `Markdown` (through `ChatMessage`), and both
+    `MarkdownJs` functions are kept. The dropped `this.content = $0;` with
+    the same text is `FormFieldMarkerJs`, a different id.
+  - enhanced-tabs reaches `Tab` (`@vaadin/tabs/src/vaadin-tab.js` is in the
+    bundle) but not `Tabs`, the only class that uses `TabsJs`.
+  - viritin, maplibre and superfields refer to `Tabs`, `Notification`,
+    `SplitLayout`, `ComboBox`, `Upload` or `TimePicker` from classes that no
+    view uses.
+
+---
+
 # Add-on CSP fallback reproducer (vaadin/flow#26153)
 
 An application runs with `vaadin.contentSecurityPolicy=strict` and uses a third-party add-on that
