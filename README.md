@@ -1,4 +1,4 @@
-# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078)
+# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441)
 
 This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
 (`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
@@ -91,6 +91,85 @@ server log has no line about `AcmeCspFallbacks`. It runs in the same
 same there: 19 of 19 tests pass in both variants, `UnusedDefinition` is not
 in the bundle, both fallback interfaces are listed and bundled, and the only
 server log error is the expected one for `ReflectedJs` (without `uses-fix`).
+
+## Methods without `@JsExpression` (vaadin/flow#27441)
+
+With #27441, a method of an interface that extends `JsInvokers` can leave
+out `@JsExpression`: `void focus();` runs `return this.focus();` on the
+element. These cases check the shorthand in an add-on, in the production
+bundle that `optimizeBundle` makes, under strict CSP.
+
+Add-on classes:
+
+- `ShorthandBox.BoxJs`: shorthand methods (no arguments, two arguments,
+  variadic, `PendingJavaScriptResult`, `JavaScriptResult<Boolean>`, two
+  overloads) and one annotated method. `ShorthandView` reaches it.
+- `UnusedDefinition.UnusedShorthandJs`: a shorthand method that no route
+  reaches, so it may not be in the bundle.
+- `ReflectedShorthandJs`: like `ReflectedJs`, called only through
+  reflection from `MissingShorthandView` (`/missing-shorthand`). The
+  `uses-fix` profile adds `@Uses(ReflectedShorthandJs.class)`.
+
+`ShorthandView` (`/shorthand`), package `org.vaadin.example.shorthand`:
+
+| Row | Case | Expected |
+| --- | --- | --- |
+| S1 | `focus()` | the box has focus |
+| S2 | `setAttribute(name, value)` | the attribute is set |
+| S3 | `append(String...)` | the texts are appended (last argument spread) |
+| S4 | `getAttribute(name)` returning `PendingJavaScriptResult` | the value comes back |
+| S5 | `hasAttribute(name)` returning `JavaScriptResult<Boolean>` | `true` comes back |
+| S6 | `toggleAttribute(name)` and `toggleAttribute(name, force)` | both attributes set |
+| S7 | annotated `mark(value)` in the same interface | `data-acme` set |
+| S8 | `SubBoxJs` (application) extends `BoxJs`, declares nothing | inherited methods work |
+| S9 | `TypoJs.focuss()`, a typo | fails in the browser, the error handler gets it |
+| R1 | `Page.executeJs(BoxJs.class)` | refused in Java: a page call runs on no element |
+| R2 | `MixedInJs`: `blur()` mixed in from an interface that does not extend `JsInvokers` | refused in Java |
+| R3 | `JsSnippets` interface with a method without `@JsExpression` | refused in Java |
+
+`ShorthandIT` checks each row, that the bundle has `BoxJs` and not
+`UnusedShorthandJs`, and the `/missing-shorthand` case (one `ERROR` that
+names `ReflectedShorthandJs` without `uses-fix`, the call works with it). It
+runs in the same commands as `MissingDefinitionIT`:
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -pl addon
+mvn clean -Pit verify -pl app
+rm -rf app/src/main/bundles
+mvn clean -Pit,uses-fix verify -pl app
+```
+
+### Results (2026-11-26, #27441 d7b6049adb, strict, production mode)
+
+33 of 33 tests pass, with and without `uses-fix` (`AddonCspIT` 17,
+`ShorthandIT` 14, `MissingDefinitionIT` 1, `DirectFallbackIT` 1).
+
+- S1-S8 work, with no browser console error. The bundle has the `BoxJs`
+  functions (`this.append(...$0)`, `this.toggleAttribute($0, $1)`) and not
+  `acmeUnusedShorthand`.
+- S9: the error handler gets `TypeError: this.focuss is not a function`. The
+  server does not notice the typo.
+- R1: `IllegalArgumentException: com.acme.addon.ShorthandBox$BoxJs has append,
+  focus, getAttribute, hasAttribute, setAttribute, toggleAttribute,
+  toggleAttribute without @JsExpression, ...`. The overloaded name is listed
+  twice.
+- R2: `... MixedInJs declares no JavaScript to run for blur. Annotate every
+  method with @JsExpression, or declare it in an interface that extends
+  JsInvokers to call the method of the same name on the element`.
+- R3: `... ShorthandSnippetsJs declares no JavaScript to run for focus.
+  Annotate every method with @JsExpression`.
+- The build logs `Leaving the JavaScript of ... out of the bundle` for
+  `MixedInJs` and `ShorthandSnippetsJs` (both on purpose) and goes on.
+- Without `uses-fix`: `/missing-shorthand` does nothing, no browser console
+  error, and the server logs one `ERROR` for two calls:
+  `com.acme.addon.ReflectedShorthandJs declares JavaScript that was not
+  included when creating the production bundle ... add a
+  @Uses(ReflectedShorthandJs.class) ...`. With `uses-fix` the call works and
+  the server log has no `ERROR` or `WARN` line.
+
+Not covered here: hotswap and the dev loop (see `repro/js-definition-hierarchy-hotswap`),
+and a `@JsStringFallback` interface with a method without `@JsExpression`.
 
 ## Notes
 

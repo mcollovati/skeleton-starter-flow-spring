@@ -22,6 +22,16 @@ public class UnusedDefinition extends Div {
         PendingJavaScriptResult unusedMarker();
     }
 
+    /**
+     * The shorthand of vaadin/flow#27441 in a definition that no route
+     * reaches: its function ({@code this.acmeUnusedShorthand()}) may not be in
+     * the bundle either.
+     */
+    @JsDefinition
+    public interface UnusedShorthandJs extends JsInvokers {
+        void acmeUnusedShorthand();
+    }
+
     @DomEvent(value = "keydown", filter = "event.key === 'AcmeUnusedKey'")
     public static class UnusedEvent extends ComponentEvent<UnusedDefinition> {
         public UnusedEvent(UnusedDefinition source, boolean fromClient,
