@@ -49,5 +49,62 @@ public class MainView extends Div {
 
         add(new Div(plainButton, plain), new Div(annotatedButton, annotated));
         add(new Div(directButton, direct));
+
+        add(new H3("Methods without @JsExpression (vaadin/flow#27441)"));
+
+        Span shorthandDirect = new Span("not run");
+        shorthandDirect.setId("shorthand-direct-result");
+        NativeButton shorthandDirectButton = new NativeButton(
+                "Run ShorthandDirectJs.append", e -> {
+                    shorthandDirect.setText("");
+                    shorthandDirect.getElement()
+                            .executeJs(ShorthandDirectJs.class)
+                            .append("clicked");
+                });
+        shorthandDirectButton.setId("shorthand-direct");
+
+        Span shorthandParent = new Span("not run");
+        shorthandParent.setId("shorthand-parent-result");
+        NativeButton shorthandParentButton = new NativeButton(
+                "Run ShorthandParentChildJs.append", e -> {
+                    shorthandParent.setText("");
+                    shorthandParent.getElement()
+                            .executeJs(ShorthandParentChildJs.class)
+                            .append("clicked");
+                });
+        shorthandParentButton.setId("shorthand-parent");
+
+        Span pageTitle = new Span("not run");
+        pageTitle.setId("page-title-result");
+        NativeButton pageTitleButton = new NativeButton(
+                "Run Page.executeJs(PageTitleJs).setTitle", e -> {
+                    try {
+                        getUI().orElseThrow().getPage()
+                                .executeJs(PageTitleJs.class)
+                                .setTitle("title set");
+                        pageTitle.setText("called");
+                    } catch (IllegalArgumentException ex) {
+                        pageTitle.setText("refused: " + ex.getMessage());
+                    }
+                });
+        pageTitleButton.setId("page-title");
+
+        Span shorthandParams = new Span("not run");
+        shorthandParams.setId("shorthand-params-result");
+        NativeButton shorthandParamsButton = new NativeButton(
+                "Run ShorthandParamsJs.append", e -> {
+                    shorthandParams.setText("");
+                    // H4: change to .append("clicked", " twice") together
+                    // with the parameters of ShorthandParamsJs.append
+                    shorthandParams.getElement()
+                            .executeJs(ShorthandParamsJs.class)
+                            .append("clicked");
+                });
+        shorthandParamsButton.setId("shorthand-params");
+
+        add(new Div(shorthandDirectButton, shorthandDirect),
+                new Div(shorthandParentButton, shorthandParent),
+                new Div(pageTitleButton, pageTitle),
+                new Div(shorthandParamsButton, shorthandParams));
     }
 }
