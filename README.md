@@ -2,9 +2,10 @@
 
 This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
 (`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
-an IT for a definition that is really missing. It checks that the production build with
-`optimizeBundle` (the default of `build-frontend`) still carries the
-`@JsStringFallback` interfaces of the application. Nothing in the
+an IT for a definition that is really missing, and a view and an IT for a
+direct call to a string fallback interface. It checks that the production
+build with `optimizeBundle` (the default of `build-frontend`) still carries
+the `@JsStringFallback` interfaces of the application. Nothing in the
 application refers to them: Flow finds them by the string an add-on sends.
 So the bytecode scanner never reaches them, and vaadin/flow#27077 must keep
 them for another reason.
@@ -67,14 +68,39 @@ reused by the next. `clean` empties the server log, which is appended to.
 
 `AddonCspIT` passes 17 of 17 in all three runs.
 
+## A direct call to a string fallback interface (vaadin/flow#27078)
+
+`DirectFallbackView` (`/direct-fallback`) calls `AcmeCspFallbacks` directly,
+as application code may do once the interface exists:
+`panel.getElement().executeJs(AcmeCspFallbacks.class)`, then
+`scrollToBottom()` and `scrollTop()`. The build registers these functions
+under the ids of string fallbacks. So the bundle check must look for those
+ids, not for the ids of the plain JavaScript. #27078 fixed this in
+3f8c95b4fd. `DirectFallbackIT` checks that the call works and that the
+server log has no line about `AcmeCspFallbacks`. It runs in the same
+`mvn clean -Pit verify -pl app`.
+
+| Flow | Result |
+| --- | --- |
+| #27078 2dbc299775 (before the fix) | the call works, but the server logs a wrong error: `org.vaadin.example.AcmeCspFallbacks declares JavaScript that was not included when creating the production bundle ...`, so the IT fails |
+| #27078 e68a80763a (with the fix) | the call works and nothing is logged; 19 of 19 tests pass, with and without `uses-fix` |
+
+## Retest on the #27078 head (2026-11-26)
+
+#27078 e68a80763a contains #27077 6602fca52d. The results above are the
+same there: 19 of 19 tests pass in both variants, `UnusedDefinition` is not
+in the bundle, both fallback interfaces are listed and bundled, and the only
+server log error is the expected one for `ReflectedJs` (without `uses-fix`).
+
 ## Notes
 
-- The fallback calls do not go through `JsDefinitionProxy`, so the runtime
-  check of #27078 does not cover them. That is fine while #27077 always keeps
-  the fallbacks.
-- Merging #27077 into #27078 breaks a test of #27077 (`BundleValidationTest`
-  uses `BundleValidationUtil.JS_DEFINITION_FUNCTION_IDS_STATS_KEY`, which
-  #27078 moved to `BundleUtils`). Main code compiles.
+- Calls that run a fallback in place of a string do not go through
+  `JsDefinitionProxy`, so the runtime check of #27078 does not cover them.
+  That is fine while #27077 always keeps the fallbacks. #27078 says so in
+  its documentation (2dbc299775).
+- Merging #27077 into #27078 broke a test of #27077 (`BundleValidationTest`
+  used `BundleValidationUtil.JS_DEFINITION_FUNCTION_IDS_STATS_KEY`, which
+  #27078 moved to `BundleUtils`). Fixed in #27078 (a516008ac1).
 
 ---
 
