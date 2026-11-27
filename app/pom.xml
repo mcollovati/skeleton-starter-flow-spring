@@ -281,6 +281,12 @@
             </properties>
         </profile>
         <profile>
+            <id>rebuild-jar-query</id>
+            <properties>
+                <extra.cases>rebuild-jar-query</extra.cases>
+            </properties>
+        </profile>
+        <profile>
             <id>rebuild-no-extension</id>
             <properties>
                 <extra.cases>rebuild-no-extension</extra.cases>

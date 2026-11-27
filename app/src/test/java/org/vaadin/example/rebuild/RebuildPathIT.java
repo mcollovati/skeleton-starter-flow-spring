@@ -20,12 +20,14 @@ import com.microsoft.playwright.Playwright;
  * Review finding 2 on vaadin/flow#27457: checks that the call of the view a
  * {@code rebuild-*} profile adds works, with
  * {@code mvn clean -Pit,rebuild-query verify -pl app} (or
- * {@code rebuild-no-extension}).
+ * {@code rebuild-no-extension} or {@code rebuild-jar-query}).
  */
 class RebuildPathIT {
 
     private static final Map<String, String> EXPECTED = Map.of(
             "rebuild-query", "value \\.app-style ?\\{ ?color: ?green;? ?\\}",
+            "rebuild-jar-query",
+            "value .*\\.acme-style ?\\{ ?color: ?(blue|#00f);? ?\\}",
             "rebuild-no-extension", "value probe x");
 
     @Test

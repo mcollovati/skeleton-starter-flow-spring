@@ -458,6 +458,35 @@ finding 3 in the Javadoc. Two browser tests were added for the profiles:
 tests), I13 fails. The same with each profile, where its own test runs and
 passes.
 
+#### Jar file imported with a query (2026-11-27, 9197eb4636)
+
+c7f802e9e4 fixes a jar file imported with a query, and 9197eb4636 strips the
+query in one place. The `rebuild-jar-query` profile adds `RebuildJarQueryView`
+(`/rebuild-jar-query`), which imports `./acme-style.css?inline` from the
+`META-INF/frontend` of the add-on. `RebuildPathIT` runs with
+`-Pit,rebuild-jar-query`.
+
+- **Before the fix (9b003631c1):** the generated file imports
+  `Frontend/acme-style.css?inline`, a path in the project, and Vite fails:
+  `[UNLOADABLE_DEPENDENCY] Could not load src/main/frontend/acme-style.css?inline`.
+- **On 9197eb4636:** the generated file imports
+  `Frontend/generated/jar-resources/acme-style.css?inline`, and the call
+  returns `.acme-style{color:#00f}` in the browser. A second build with no
+  change logs `A production mode bundle build is not needed`. After the CSS
+  file in the add-on changes (and the add-on is installed again), the next
+  build logs `Detected changed content for frontend files that JavaScript
+  definitions import: - acme-style.css` and runs Vite.
+
+```
+rm -rf app/src/main/bundles
+mvn clean install -DskipTests -pl addon
+mvn clean -Pit,rebuild-jar-query verify -pl app
+```
+
+`mvn clean -Pit verify -pl app` on 9197eb4636: 57 tests, 54 pass, 2 skipped,
+I13 fails on purpose. The same with `name-clash`, `rebuild-query` and
+`rebuild-no-extension`, where the profile's own test passes.
+
 ## Notes
 
 - Calls that run a fallback in place of a string do not go through
