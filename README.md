@@ -14,6 +14,9 @@ them for another reason.
 event data. No route reaches it, so with #27077 none of its JavaScript may be
 in the bundle.
 
+Every view has a menu on the left (`MainLayout`, applied with `@Layout`)
+that links to all use cases, grouped by issue or PR.
+
 ## Steps
 
 Install Flow with the change (flow-bom, flow-server, flow-build-tools,
