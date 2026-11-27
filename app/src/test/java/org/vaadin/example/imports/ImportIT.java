@@ -211,6 +211,30 @@ class ImportIT {
                 + " | console: " + consoleErrors);
     }
 
+    /**
+     * I13: the server sends reset(), init() (with an import) and
+     * record("after-init") in one response. Expected in the order they were
+     * sent, so init has set $connector when record runs. The second click is
+     * made when the module is already loaded. Fails on purpose while an
+     * importing call runs after the calls that follow it.
+     */
+    @Test
+    void i13_callsRunInTheOrderTheyWereSent() {
+        Locator box = run("i13");
+        assertThat(result("i13")).hasText("called");
+        page.waitForTimeout(500);
+        String firstClick = box.getAttribute("data-order");
+        click("i13");
+        page.waitForTimeout(500);
+        String secondClick = box.getAttribute("data-order");
+        System.out.println("I13: first click '" + firstClick
+                + "', second click '" + secondClick + "'");
+        assertEquals("init after-init:ready", firstClick, "first click");
+        assertEquals("init after-init:ready", secondClick,
+                "second click, module already loaded");
+        assertNoConsoleErrors();
+    }
+
     @Test
     void modulesLoadOnFirstCallAndOnce() {
         open();

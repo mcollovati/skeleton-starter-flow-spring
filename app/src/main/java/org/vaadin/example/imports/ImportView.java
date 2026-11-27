@@ -16,8 +16,9 @@ import com.vaadin.flow.router.Route;
  * Cases for vaadin/flow#27423: {@code @JsDefinitionImport} gives the
  * JavaScript of a definition names from a module. Each row has a box, a "Run"
  * button and a result. Rows I1-I11 must work, I12 fails in the browser on
- * purpose, rows X1-X6 must be refused in Java and the result shows the
- * message.
+ * purpose, I13 shows the order of the calls (its box gets
+ * {@code data-order}), rows X1-X6 must be refused in Java and the result
+ * shows the message.
  */
 @Route("imports")
 public class ImportView extends Div {
@@ -81,6 +82,16 @@ public class ImportView extends Div {
                         .then(value -> result.setText("no error: " + value),
                                 error -> result.setText(
                                         "browser error: " + error)));
+        row("i13", "order: a call after an importing call in the same response",
+                (box, result) -> {
+                    AppImports.ConnectorCheckJs check = box.getElement()
+                            .executeJs(AppImports.ConnectorCheckJs.class);
+                    check.reset();
+                    box.getElement().executeJs(AppImports.ConnectorJs.class)
+                            .init();
+                    check.record("after-init");
+                    result.setText("called");
+                });
 
         add(new H3("Refused in Java"));
         row("x1", "JsSnippets interface with an import",

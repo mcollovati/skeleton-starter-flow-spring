@@ -63,6 +63,34 @@ public final class AppImports {
         PendingJavaScriptResult call(String text);
     }
 
+    /**
+     * I13: like the example in the Javadoc of {@code @JsDefinitionImport}:
+     * {@code init(this)} sets {@code $connector} on the element, and the
+     * calls that follow it in the same response expect it to be set.
+     */
+    @JsDefinition
+    @JsDefinitionImport(from = "./app-connector.js", exports = "init")
+    public interface ConnectorJs extends JsInvokers {
+
+        @JsExpression("init(this)")
+        void init();
+    }
+
+    /**
+     * I13: no import, so this JavaScript runs at once when the client handles
+     * the invocation. Each step is added to {@code data-order}.
+     */
+    @JsDefinition
+    public interface ConnectorCheckJs extends JsInvokers {
+
+        @JsExpression("delete this.$connector; this.dataset.order = '';")
+        void reset();
+
+        @JsExpression("this.dataset.order = (this.dataset.order + ' ' + $0"
+                + " + (this.$connector ? ':ready' : ':missing')).trim();")
+        void record(String step);
+    }
+
     // Refused in Java (and left out of the bundle by the build)
 
     /** X1: a snippet function is not async, so it can not wait for a module. */

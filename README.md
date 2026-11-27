@@ -241,6 +241,7 @@ application definitions are in `AppImports`, and the application module is
 | I10 | npm package: `from = "lit", exports = { "html", "render" }` | `<b class="lit">ten</b>` is rendered |
 | I11 | `arguments` holds the imported values, as the Javadoc says | `3` (`format`, `upper`, `labels`) |
 | I12 | `exports = "notExported"`, which the module does not have | fails in the browser, the error handler gets it |
+| I13 | order of calls: `reset()`, `ConnectorJs.init()` (imports `init` from `app-connector.js`) and `record("after-init")` in one response; see [Review findings](#review-findings-on-vaadinflow27457-2026-11-27) | `data-order` is `init after-init:ready`. Fails on purpose |
 | X1 | `JsSnippets` interface with an import | refused in Java |
 | X2 | import that names nothing | refused in Java |
 | X3 | `defaultExport = "default"` (reserved word) | refused in Java |
@@ -361,6 +362,72 @@ mvn clean -Pmissing-module package -DskipTests -pl app
 ```
 
 Not covered here: hotswap and the dev loop with imports.
+
+### Review findings on vaadin/flow#27457 (2026-11-27)
+
+These cases show the three findings of the review
+(https://github.com/vaadin/flow/pull/27457#pullrequestreview-6087071461).
+Flow `feat/js-definition-import` 48a0555cc6, strict, production mode.
+
+**1. An import name and a `const` with the same name.** The `name-clash`
+profile adds `NameClashView` (`/name-clash`). Its definition imports
+`format` from `app-format.js`, and the method `local()` declares
+`const format = ...`. `local()` does not use the import, and was valid
+before the import was added. The server accepts the interface. Vite fails:
+
+```
+[PARSE_ERROR] Identifier `format` has already been declared
+ 627 │   return (async function (format) {
+ 628 │ const format = '<' + $0 + '>'; return format;
+```
+
+The message shows the generated line, but not the Java interface.
+
+```
+rm -rf app/src/main/bundles
+mvn clean -Pname-clash package -DskipTests -pl app
+```
+
+Not checked: development mode, where the whole generated file should fail to
+load, so that no definition works.
+
+**2. Paths that rebuild the bundle on every build.** Each profile adds one
+view with a definition that imports the path. The first build works (Vite
+builds the import). The second build, with nothing changed, should log
+`A production mode bundle build is not needed`, but it runs Vite again:
+
+| Profile | `from` | Second build logs |
+| --- | --- | --- |
+| `rebuild-query` | `./app-style.css?inline` | `No file found for 'app-style.css?inline'`, then `Running Vite` |
+| `rebuild-no-extension` | `./app-probe` (for `app-probe.js`) | `No file found for 'app-probe'`, then `Running Vite` |
+| `rebuild-mjs` | `./app-plain.mjs` | `No hash info for 'app-plain.mjs'`, `Detected changed content for frontend files that JavaScript definitions import: - app-plain.mjs`, then `Running Vite` |
+
+```
+rm -rf app/src/main/bundles
+mvn clean -Prebuild-query package -DskipTests -pl app
+mvn clean -Prebuild-query package -DskipTests -pl app
+```
+
+The same for `rebuild-no-extension` and `rebuild-mjs` (delete
+`app/src/main/bundles` before the first build of each). The calls of these
+views were not run in a browser.
+
+**3. Order of calls (row I13).** In one response the server sends
+`reset()`, then `ConnectorJs.init()`, which imports `init`, and
+`record("after-init")`, which has no import. `init` sets `$connector` on the
+element, as in the example of the `@JsDefinitionImport` Javadoc
+(`connector.initLazy(this)`). Each step is added to `data-order`.
+`ImportIT.i13_callsRunInTheOrderTheyWereSent` expects
+`init after-init:ready` and fails on purpose:
+
+```
+I13: first click 'after-init:missing init', second click 'after-init:missing init'
+```
+
+`record` runs before `init`, also on the second click, when the module is
+already loaded. `mvn clean -Pit verify -pl app`: 55 tests, 54 pass, and
+`i13_callsRunInTheOrderTheyWereSent` fails. The `uses-fix` run was not
+repeated.
 
 ## Notes
 

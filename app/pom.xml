@@ -15,6 +15,9 @@
     <properties>
         <!-- Set to true by the uses-fix profile -->
         <it.usesFix>false</it.usesFix>
+        <!-- Set by the name-clash and rebuild-* profiles: adds
+             src/${extra.cases}/java to the build. "none" does not exist -->
+        <extra.cases>none</extra.cases>
     </properties>
 
     <dependencies>
@@ -68,6 +71,24 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-extra-cases</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/${extra.cases}/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>com.vaadin</groupId>
@@ -242,6 +263,33 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <!-- Review findings on vaadin/flow#27457 (see the README). Each one
+             adds src/<id>/java -->
+        <profile>
+            <id>name-clash</id>
+            <properties>
+                <extra.cases>name-clash</extra.cases>
+            </properties>
+        </profile>
+        <profile>
+            <id>rebuild-query</id>
+            <properties>
+                <extra.cases>rebuild-query</extra.cases>
+            </properties>
+        </profile>
+        <profile>
+            <id>rebuild-no-extension</id>
+            <properties>
+                <extra.cases>rebuild-no-extension</extra.cases>
+            </properties>
+        </profile>
+        <profile>
+            <id>rebuild-mjs</id>
+            <properties>
+                <extra.cases>rebuild-mjs</extra.cases>
+            </properties>
         </profile>
 
     </profiles>
