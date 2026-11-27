@@ -169,6 +169,7 @@
                                 <it.baseUrl>http://localhost:${it.port}</it.baseUrl>
                                 <it.serverLog>${project.build.directory}/server.log</it.serverLog>
                                 <it.usesFix>${it.usesFix}</it.usesFix>
+                                <it.extraCases>${extra.cases}</it.extraCases>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -283,12 +284,6 @@
             <id>rebuild-no-extension</id>
             <properties>
                 <extra.cases>rebuild-no-extension</extra.cases>
-            </properties>
-        </profile>
-        <profile>
-            <id>rebuild-mjs</id>
-            <properties>
-                <extra.cases>rebuild-mjs</extra.cases>
             </properties>
         </profile>
 

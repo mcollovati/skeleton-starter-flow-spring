@@ -400,7 +400,6 @@ builds the import). The second build, with nothing changed, should log
 | --- | --- | --- |
 | `rebuild-query` | `./app-style.css?inline` | `No file found for 'app-style.css?inline'`, then `Running Vite` |
 | `rebuild-no-extension` | `./app-probe` (for `app-probe.js`) | `No file found for 'app-probe'`, then `Running Vite` |
-| `rebuild-mjs` | `./app-plain.mjs` | `No hash info for 'app-plain.mjs'`, `Detected changed content for frontend files that JavaScript definitions import: - app-plain.mjs`, then `Running Vite` |
 
 ```
 rm -rf app/src/main/bundles
@@ -408,9 +407,8 @@ mvn clean -Prebuild-query package -DskipTests -pl app
 mvn clean -Prebuild-query package -DskipTests -pl app
 ```
 
-The same for `rebuild-no-extension` and `rebuild-mjs` (delete
-`app/src/main/bundles` before the first build of each). The calls of these
-views were not run in a browser.
+The same for `rebuild-no-extension` (delete `app/src/main/bundles` before
+the first build).
 
 **3. Order of calls (row I13).** In one response the server sends
 `reset()`, then `ConnectorJs.init()`, which imports `init`, and
@@ -428,6 +426,37 @@ I13: first click 'after-init:missing init', second click 'after-init:missing ini
 already loaded. `mvn clean -Pit verify -pl app`: 55 tests, 54 pass, and
 `i13_callsRunInTheOrderTheyWereSent` fails. The `uses-fix` run was not
 repeated.
+
+#### Retest on the fixes (2026-11-27, 9b003631c1)
+
+The PR fixed findings 1 and 2 (b1d8647621, 9b003631c1) and documented
+finding 3 in the Javadoc. Two browser tests were added for the profiles:
+`NameClashIT` runs with `-Pit,name-clash`, `RebuildPathIT` with
+`-Pit,rebuild-*`. Each one is skipped without its profile.
+
+- **1. Name clash:** `mvn clean -Pit,name-clash verify -pl app` builds.
+  `NameClashIT` passes: `local()` returns `<x>` (its `const format` hides the
+  import) and `formatted()` still returns `{y}`, with no browser console
+  error.
+- **2. Rebuild:** fixed. For each profile, the IT build, then a build with no
+  change, then a build after a line is added to the imported file:
+
+  | Profile | Call in the browser | No change | File changed |
+  | --- | --- | --- | --- |
+  | `rebuild-query` | `.app-style{color:green}` | `A production mode bundle build is not needed` | `Detected changed content for frontend files that JavaScript definitions import: - app-style.css`, new build |
+  | `rebuild-no-extension` | `probe x` | not needed | `Detected changed frontend files: - app-probe.js`, new build |
+
+  The Vite config of Flow gives a CSS file imported with `?inline` as a Lit
+  `CSSResult`, so `RebuildQueryView` reads `cssText`.
+- **3. Order of calls:** not changed in the client, so
+  `i13_callsRunInTheOrderTheyWereSent` still fails on purpose
+  (`after-init:missing init` on both clicks). The Javadoc now says that the
+  JavaScript of an importing call runs after the calls that follow it in the
+  same round trip.
+
+`mvn clean -Pit verify -pl app`: 57 tests, 54 pass, 2 skipped (the profile
+tests), I13 fails. The same with each profile, where its own test runs and
+passes.
 
 ## Notes
 

@@ -23,7 +23,9 @@ public class RebuildQueryView extends Div {
     @JsDefinitionImport(from = "./app-style.css?inline", defaultExport = "imported")
     public interface ImportJs extends JsInvokers {
 
-        @JsExpression("return imported.trim();")
+        // The Vite config of Flow gives a CSS file imported with ?inline as a
+        // Lit CSSResult, not as a string
+        @JsExpression("return String(imported.cssText ?? imported).trim();")
         PendingJavaScriptResult call(String text);
     }
 

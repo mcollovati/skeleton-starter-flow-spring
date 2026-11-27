@@ -39,6 +39,18 @@ public class NameClashView extends Div {
                 .then(String.class, value -> result.setText("value " + value),
                         error -> result.setText("failed: " + error)));
         run.setId("run");
-        add(run, result);
+        add(new Div(run, result));
+
+        Span formatResult = new Span();
+        formatResult.setId("format-result");
+        NativeButton format = new NativeButton("Run formatted",
+                event -> getElement().executeJs(NameClashJs.class)
+                        .formatted("y")
+                        .then(String.class,
+                                value -> formatResult.setText("value " + value),
+                                error -> formatResult
+                                        .setText("failed: " + error)));
+        format.setId("format");
+        add(new Div(format, formatResult));
     }
 }
