@@ -1,5 +1,7 @@
 package org.vaadin.example;
 
+import org.vaadin.example.imports.ImportView;
+import org.vaadin.example.imports.MissingImportView;
 import org.vaadin.example.shorthand.MissingShorthandView;
 import org.vaadin.example.shorthand.ShorthandView;
 
@@ -37,6 +39,10 @@ public class MainLayout extends Div implements RouterLayout {
         menu.add(link("Shorthand calls and refusals", ShorthandView.class));
         menu.add(link("Shorthand definition used only by reflection",
                 MissingShorthandView.class));
+        menu.add(group("Imports from modules (#27423)"));
+        menu.add(link("Imports, calls and refusals", ImportView.class));
+        menu.add(link("Importing definition used only by reflection",
+                MissingImportView.class));
 
         content.addClassName("content");
         addClassName("main-layout");

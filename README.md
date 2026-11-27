@@ -1,4 +1,4 @@
-# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441)
+# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441, #27423)
 
 This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
 (`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
@@ -194,6 +194,173 @@ tests pass. Only R2 and R3 pass, because they are refused on both builds.
 
 Not covered here: hotswap and the dev loop (see `repro/js-definition-hierarchy-hotswap`),
 and a `@JsStringFallback` interface with a method without `@JsExpression`.
+
+## Imports from modules (`@JsDefinitionImport`, vaadin/flow#27423)
+
+`@JsDefinitionImport(from, defaultExport, namespace, exports)` on a
+`JsInvokers` definition gives its JavaScript names from a module, like an
+`import` statement. The generated function loads the module with `import()`
+on the first call. These cases check the annotation in an add-on and in the
+application, in the production bundle that `optimizeBundle` makes, under
+strict CSP.
+
+Add-on classes and modules:
+
+- `ImportBox.ImportBoxJs`: imports `format` (default export) and `upper`
+  from `acme-format.js` (in `META-INF/frontend`), and `acme-label.js` (in
+  `META-INF/resources/frontend`) as the namespace `labels`. It also has a
+  `@JsModule("./acme-eager.js")` and a method without `@JsExpression`.
+  `ImportView` reaches it.
+- `ImportBox.AltFormatJs`: the same JavaScript as `ImportBoxJs.showFormatted`
+  (`this.textContent = format($0);`), with `format` from `acme-format-alt.js`.
+- `UnusedDefinition.UnusedImportJs`: imports `acme-unused-import.js`. No
+  route reaches it, so the function and the module may not be in the bundle.
+- `ReflectedImportJs`: imports `acme-reflected-import.js` and is called only
+  through reflection from `MissingImportView` (`/missing-import`). The
+  `uses-fix` profile adds `@Uses(ReflectedImportJs.class)`.
+
+The modules set `window.acmeFormatLoads`, `window.acmeLabelLoads` and
+`window.appFormatLoads` when they load, so the test can see when, and how
+often, each module is loaded.
+
+`ImportView` (`/imports`), package `org.vaadin.example.imports`; the
+application definitions are in `AppImports`, and the application module is
+`app/src/main/frontend/app-format.js`:
+
+| Row | Case | Expected |
+| --- | --- | --- |
+| I1 | default export and a named export: `upper(format($0))` | `[ONE]` |
+| I2 | namespace, with the default export through it: `labels.default` | `label: two label-1 label-default` |
+| I3 | `PendingJavaScriptResult` | `[three]` comes back |
+| I4 | `JavaScriptResult<String>` | `label-1` comes back |
+| I5 | variadic: `$0.map(format)` | `[a] [b] [c]` |
+| I6 | a method without `@JsExpression` (`focus()`) in an interface with imports | the box has focus |
+| I7 | `AltFormatJs`: same JavaScript, other imports | `<seven>`, while `ImportBoxJs` still gives `[seven]` |
+| I8 | `AppFormatJs` (application) extends `ImportBoxJs` and imports another `format` from `app-format.js` | inherited method `[eight]` (the add-on's `format`), own method `{eight}` |
+| I9 | `Page.executeJs(PageImportJs.class)`, module of the project | `NINE!` comes back |
+| I10 | npm package: `from = "lit", exports = { "html", "render" }` | `<b class="lit">ten</b>` is rendered |
+| I11 | `arguments` holds the imported values, as the Javadoc says | `3` (`format`, `upper`, `labels`) |
+| I12 | `exports = "notExported"`, which the module does not have | fails in the browser, the error handler gets it |
+| X1 | `JsSnippets` interface with an import | refused in Java |
+| X2 | import that names nothing | refused in Java |
+| X3 | `defaultExport = "default"` (reserved word) | refused in Java |
+| X4 | `namespace = "$0"` (argument name) | refused in Java |
+| X5 | `format` from two modules | refused in Java |
+| X6 | bad import (`namespace = "class"`) on a parent interface that is not a definition | refused in Java, the message names the parent |
+
+`AppImports.ImportOnClass` is a class with the annotation. It is not used
+anywhere; the build only logs an error for it.
+
+`ImportIT` checks each row, that the modules are loaded on the first call
+and once (I1, I3 and I8 make three calls through two definitions that
+import `acme-format.js`), that `acme-eager.js` is loaded with the view, what
+the bundle carries, and the `/missing-import` case. It runs in the same
+commands as `MissingDefinitionIT`:
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -pl addon
+mvn clean -Pit verify -pl app
+rm -rf app/src/main/bundles
+mvn clean -Pit,uses-fix verify -pl app
+```
+
+### Results (2026-11-27, feat/js-definition-import b097481362, strict, production mode)
+
+54 of 54 tests pass, with and without `uses-fix` (`AddonCspIT` 17,
+`ShorthandIT` 14, `ImportIT` 21, `MissingDefinitionIT` 1,
+`DirectFallbackIT` 1).
+
+- I1-I11 work, with no browser console error. Each module is in a chunk of
+  its own (`acme-format-*.js`, `acme-label-*.js`, `app-format-*.js`,
+  `acme-format-alt-*.js`). None of them is loaded when the view opens, and
+  each is loaded once after three calls. `acme-eager.js` (`@JsModule` on
+  the same definition) is loaded with the view.
+- The generated file imports the jar modules as
+  `import("Frontend/generated/jar-resources/acme-format.js")`, the project
+  module as `import("Frontend/app-format.js")` and the npm package as
+  `import("lit")`.
+- I12: the error handler gets `TypeError: t is not a function`. The
+  production build minifies the names of the generated function, so the
+  message does not name `notExported`. In development mode it does:
+  `TypeError: notExported is not a function`. Nothing checks the export
+  names at build time.
+- X1-X6 are refused in Java with these messages:
+  - X1: `... ImportSnippetsJs is annotated with @JsDefinitionImport, which
+    only applies to an interface that extends JsInvokers. The function of a
+    snippet is not asynchronous, so it can not wait for a module to load`
+  - X2: `... NoNamesJs has @JsDefinitionImport(from = "./app-format.js")
+    with no names to import. Declare a defaultExport, a namespace or
+    exports, or use @JsModule to load the module for its side effects`
+  - X3, X4: `... declares 'default' in @JsDefinitionImport(from =
+    "./app-format.js"), which can not be imported as a name. Use a
+    JavaScript identifier that is not a reserved word, not $0, $1, ...,
+    which name the arguments, and not $executionContext. ...` (`'$0'` for X4)
+  - X5: `... DuplicateNameJs declares 'format' more than once in
+    @JsDefinitionImport. Import one of them as a namespace`
+  - X6: `... InheritedBadImportJs extends ...BadImportParent, which declares
+    'class' in @JsDefinitionImport(...) ...`
+- The build logs `Leaving the JavaScript of ... out of the bundle` with the
+  same message for X1-X6, and `Ignoring @JsDefinitionImport on
+  org.vaadin.example.imports.AppImports$ImportOnClass, which only applies to
+  an interface whose methods a definition extending JsInvokers declares`,
+  and goes on.
+- The bundle does not have `UnusedImportJs` or `acme-unused-import.js`.
+- Without `uses-fix`: `/missing-import` does nothing, no browser console
+  error, and the server logs one `ERROR` for two calls:
+  `com.acme.addon.ReflectedImportJs declares JavaScript that was not
+  included when creating the production bundle ... add a
+  @Uses(ReflectedImportJs.class) ...`. With `uses-fix` the call works (the
+  text from `acme-reflected-import.js` is shown), the module is in the build,
+  and the server log has no `ERROR` or `WARN` line.
+
+Development mode (`mvn spring-boot:run -pl app`, then the browser tests with
+`mvn -Pit failsafe:integration-test -pl app '-Dit.test=ImportIT#i*+modules*+x*'`):
+19 of 19 pass. At startup, Flow builds a new dev bundle ("Detected changed
+content for frontend files that JavaScript definitions import").
+
+### The bundle is rebuilt when an imported file changes
+
+`mvn clean package -DskipTests -pl app`, run again after each change (the
+bundle saved in `app/src/main/bundles` is kept between the runs):
+
+| Change | Build log |
+| --- | --- |
+| none | `A production mode bundle build is not needed` |
+| `app/src/main/frontend/app-format.js` (project file) | `Detected changed content for frontend files that JavaScript definitions import: - app-format.js`, then a new build |
+| the same file changed back | the same, a new build |
+| `acme-format.js` in the add-on jar (`META-INF/frontend`), `mvn install -pl addon` | `... - acme-format.js`, then a new build |
+| `acme-label.js` in the add-on jar (`META-INF/resources/frontend`) | `... - acme-label.js`, then a new build; the new text is in the chunk |
+
+### Two cases in profiles of their own
+
+Each of these stops the build, so they are not in the default build.
+
+- `-Pfallback-import` adds `FallbackImportJs`, a `@JsStringFallback`
+  interface with `@JsDefinitionImport`. `build-frontend` fails:
+  `Could not execute build-frontend goal: ...FallbackImportJs is annotated
+  with @JsDefinitionImport, which does not apply to an interface annotated
+  with @JsStringFallback: the string it stands in for can not name what a
+  module exports`. This is how the build treats every `@JsStringFallback`
+  interface that can not stand in for a string (#27128): the application
+  owns it, so the build fails. The build first logs `Leaving the JavaScript
+  of ... out of the bundle` with the same message.
+- `-Pmissing-module` adds `MissingModuleView` (`/missing-module`), which a
+  route reaches, with a definition that imports `./acme-does-not-exist.js`.
+  The bundle check logs `No file found for 'acme-does-not-exist.js'`, then
+  Vite fails: `[UNLOADABLE_DEPENDENCY] Could not load
+  src/main/frontend/acme-does-not-exist.js`, and shows the generated line
+  (`import("Frontend/acme-does-not-exist.js")`). The message does not name
+  the Java interface. Unresolved modules are vaadin/flow#27424.
+
+```
+rm -rf app/src/main/bundles
+mvn clean -Pfallback-import package -DskipTests -pl app
+rm -rf app/src/main/bundles
+mvn clean -Pmissing-module package -DskipTests -pl app
+```
+
+Not covered here: hotswap and the dev loop with imports.
 
 ## Notes
 

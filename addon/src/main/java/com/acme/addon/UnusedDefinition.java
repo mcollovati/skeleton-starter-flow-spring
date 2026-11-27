@@ -6,6 +6,7 @@ import com.vaadin.flow.component.EventData;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.page.PendingJavaScriptResult;
 import com.vaadin.flow.js.JsDefinition;
+import com.vaadin.flow.js.JsDefinitionImport;
 import com.vaadin.flow.js.JsExpression;
 import com.vaadin.flow.js.JsInvokers;
 
@@ -30,6 +31,18 @@ public class UnusedDefinition extends Div {
     @JsDefinition
     public interface UnusedShorthandJs extends JsInvokers {
         void acmeUnusedShorthand();
+    }
+
+    /**
+     * Imports a module of the add-on with {@code @JsDefinitionImport}
+     * (vaadin/flow#27423) in a definition that no route reaches: neither its
+     * function nor {@code acme-unused-import.js} may be in the bundle.
+     */
+    @JsDefinition
+    @JsDefinitionImport(from = "./acme-unused-import.js", exports = "marker")
+    public interface UnusedImportJs extends JsInvokers {
+        @JsExpression("return marker")
+        PendingJavaScriptResult unusedImportMarker();
     }
 
     @DomEvent(value = "keydown", filter = "event.key === 'AcmeUnusedKey'")
