@@ -1,10 +1,16 @@
 package org.vaadin.example;
 
+import org.vaadin.example.imports.ImportAddJs;
+import org.vaadin.example.imports.ImportDirectJs;
+import org.vaadin.example.imports.ImportParentChildJs;
+import org.vaadin.example.imports.ImportResourceJs;
+
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.router.Route;
 
 /**
@@ -106,5 +112,36 @@ public class MainView extends Div {
                 new Div(shorthandParentButton, shorthandParent),
                 new Div(pageTitleButton, pageTitle),
                 new Div(shorthandParamsButton, shorthandParams));
+
+        add(new H3("Imports from modules (vaadin/flow#27423)"));
+        importRow("import-direct", "Run ImportDirectJs.show",
+                result -> result.getElement().executeJs(ImportDirectJs.class)
+                        .show("clicked"));
+        importRow("import-parent", "Run ImportParentChildJs.show",
+                result -> result.getElement()
+                        .executeJs(ImportParentChildJs.class)
+                        .show("clicked"));
+        importRow("import-add", "Run ImportAddJs.show",
+                result -> result.getElement().executeJs(ImportAddJs.class)
+                        .show("clicked"));
+        importRow("import-resource", "Run ImportResourceJs.show",
+                result -> result.getElement()
+                        .executeJs(ImportResourceJs.class).show("clicked"));
+    }
+
+    private void importRow(String id, String text,
+            SerializableConsumer<Span> call) {
+        Span result = new Span("not run");
+        result.setId(id + "-result");
+        NativeButton button = new NativeButton(text, e -> {
+            result.setText("");
+            try {
+                call.accept(result);
+            } catch (IllegalArgumentException ex) {
+                result.setText("refused: " + ex.getMessage());
+            }
+        });
+        button.setId(id);
+        add(new Div(button, result));
     }
 }

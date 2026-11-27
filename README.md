@@ -1,4 +1,4 @@
-# JavaScript definition hierarchy and hotswap (vaadin/flow#27152, #27441)
+# JavaScript definition hierarchy and hotswap (vaadin/flow#27152, #27441, #27423)
 
 With vaadin/flow#27152, a JavaScript definition has `@JsDefinition` and
 extends `JsInvokers` or `JsSnippets`. This project checks what hotswap does
@@ -137,6 +137,101 @@ The `-javaagent` of this run was a `flow-devloop-daemon` 25.5-SNAPSHOT from
 `~/.m2`, not from the PR: the CLI resolves it with the project's `mvnw` (Maven
 3.8.4), which ignores the private repository. `flow-server`, `vaadin-dev-server` and `flow-build-tools`
 on the application classpath were the PR's.
+
+## Imports from modules (`@JsDefinitionImport`, vaadin/flow#27423)
+
+`@JsDefinitionImport(from, defaultExport, namespace, exports)` gives the
+JavaScript of a `JsInvokers` definition names from a module. The imports are
+hashed into the identifier of each function, so a changed import is a new
+function, as a changed expression is. These cases check that a hotswap with
+the dev loop picks up a changed import, and that an edited module reaches
+the browser. The definitions are in `org.vaadin.example.imports`, the
+modules are `src/main/frontend/format-v1.js`, `format-v2.js` (same exports,
+other text) and `src/main/resources/META-INF/resources/frontend/res-format.js`
+(a frontend file on the class path, which the build imports from
+`generated/jar-resources`, as one in a jar).
+
+| Case | Interface | Button | Change |
+|---|---|---|---|
+| M1 | `ImportDirectJs` | "Run ImportDirectJs.show" | only the module: `from = "./format-v1.js"` to `"./format-v2.js"`, then back |
+| M2 | `ImportParentChildJs` (`@JsDefinition`), method and import in `ImportParentJs` (no `@JsDefinition`) | "Run ImportParentChildJs.show" | the same, in the parent |
+| M3 | `ImportAddJs`, no import | "Run ImportAddJs.show" | add `@JsDefinitionImport(from = "./format-v1.js", exports = "shout")` and use `shout($0)`, then take both away |
+| M4 | `ImportResourceJs`, module on the class path | "Run ImportResourceJs.show" | `namespace = "res"` to `"other"`, expression `'other ' + other.format($0)`, then back |
+| M5 | none | "Run ImportDirectJs.show" or "Run ImportParentChildJs.show" | edit `format-v1.js` itself (`'v1('` to `'v1-edited('`), then back |
+| M6 | `ImportDirectJs` | "Run ImportDirectJs.show" | `defaultExport = "format"` to `"default"`, which is refused, then back |
+
+M2 checks that the import of a parent without `@JsDefinition` reaches the
+definitions that extend it. M4 checks that the hotswap imports the module
+from where the build does: the hotswapper got a class finder in #27423 to
+tell a file of the frontend folder from one on the class path.
+
+For M1-M4 and M6 run `.vaadin/vaadin-dev apply --no-restart`, press the
+button, then `.vaadin/vaadin-dev apply` and press it again. For M5 keep the
+page open, press the button, edit the file, press it again.
+
+### Results: feat/js-definition-import b097481362 (2026-11-27)
+
+JDK 25 (no JBR; no case changes a method signature). Flow modules of the
+branch in a private local repository (`MAVEN_ARGS` with
+`maven.repo.local.tail`, Maven 3.9 through `-Dvaadin.dev.maven`), and the
+daemon jar built from the branch through `-Dvaadin.dev.daemonJar`.
+
+With `-Dvaadin.frontend.hotdeploy=true` (Vite running):
+
+| Case | `apply --no-restart` | then `apply` |
+|---|---|---|
+| M1 to v2 | "frontend imports changed (ImportDirectJs)", redefined, file rewritten (new function with `import("Frontend/format-v2.js")`), Vite HMR: `v2(clicked)` | `redefineClasses(1)`: `v2(clicked)` |
+| M1 back | `v1(clicked)` | same |
+| M2 to v2 | "frontend imports changed (ImportParentJs)", HMR: `parent v2(clicked)` | same |
+| M2 back | `parent v1(clicked)` | same |
+| M3 add | "frontend imports changed (ImportAddJs)", HMR: `v1 CLICKED!` | same |
+| M3 remove | `no import: clicked` | same |
+| M4 | new function with `import("Frontend/generated/jar-resources/res-format.js")`, as the build writes it: `other res(clicked)` | same |
+| M4 back | `res(clicked)` | same |
+| M6 `"default"` | the call is refused in Java: `ImportDirectJs declares 'default' in @JsDefinitionImport(from = "./format-v1.js"), which can not be imported as a name. ...`; the log has `Leaving the JavaScript of ...ImportDirectJs out of the bundle` with the same text | same |
+| M6 back | `v1(clicked)` | same |
+
+With the page kept open (no reload): M1 with `apply --no-restart` changes
+the result from `v1(clicked)` to `v2(clicked)`. M5: Vite sends the change of
+`format-v1.js` up to `vaadin-js-definitions.js` ("hot updated:
+/generated/vaadin-js-definitions.js"), and the next press shows
+`v1-edited(clicked)`. Putting the file back works the same way.
+
+Without hot deploy (dev bundle):
+
+- M1 with `apply --no-restart`: the hotswapper warns `The JavaScript declared
+  by org.vaadin.example.imports.ImportDirectJs is not the JavaScript the
+  frontend bundle carries. ... a call made through the definition keeps
+  running the previous version, or finds no function at all, until the
+  application is restarted.` The button does nothing and the browser console
+  shows `No JavaScript in the bundle for 5613870b...`: with another import
+  the function has another identifier, so there is no previous version to
+  run. The `apply` after it only redefines, so the call still fails.
+  `vaadin-dev restart` logs `Detected changed content for frontend files
+  that JavaScript definitions import: - format-v2.js`, builds a new dev
+  bundle, and the button shows `v2(clicked)`. Changing it back with a plain
+  `apply` restarts ("frontend imports changed (ImportDirectJs)") and works.
+- M5: a plain `apply` after editing `format-v1.js` restarts ("frontend
+  changed (dev bundle rebuild)") and the button shows `parent
+  v1-edited(clicked)`. Putting it back works the same way.
+
+The other buttons (#27152, #27441) still work at the end.
+
+Notes:
+
+- The first page after a new dev bundle logs a 404 for `/favicon.ico`.
+  This is not related to the cases.
+- The dev loop kept the launch classpath of an earlier run in
+  `target/devloop` (a private repository that no longer existed), although
+  `target/devloop/cp.txt` had been resolved again, and the app failed with
+  `NoClassDefFoundError: com/vaadin/flow/component/page/AppShellConfigurator`.
+  `vaadin-dev shutdown` and deleting `target/devloop` fixed it.
+- The startup log warns that `META-INF/resources/frontend` is deprecated
+  (use `META-INF/frontend`), but the `@JsDefinitionImport` Javadoc names
+  only `META-INF/resources/frontend` for a jar.
+
+Not covered here: a module in a separate jar (the class-path file of M4 takes
+the same path), and the JBR with a changed method signature (see H4).
 
 Run `.vaadin/vaadin-dev shutdown` when done, and remove `.vaadin`, `.agents`
 and `.claude`.
