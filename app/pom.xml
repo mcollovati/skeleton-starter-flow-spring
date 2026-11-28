@@ -18,6 +18,11 @@
         <!-- Set by the name-clash and rebuild-* profiles: adds
              src/${extra.cases}/java to the build. "none" does not exist -->
         <extra.cases>none</extra.cases>
+        <!-- Set to true by the module-invokers profile -->
+        <it.moduleInvokers>false</it.moduleInvokers>
+        <!-- Set to true on the command line when the tests run against
+             development mode: the tests of the production build are skipped -->
+        <it.devMode>false</it.devMode>
     </properties>
 
     <dependencies>
@@ -170,6 +175,8 @@
                                 <it.serverLog>${project.build.directory}/server.log</it.serverLog>
                                 <it.usesFix>${it.usesFix}</it.usesFix>
                                 <it.extraCases>${extra.cases}</it.extraCases>
+                                <it.moduleInvokers>${it.moduleInvokers}</it.moduleInvokers>
+                                <it.devMode>${it.devMode}</it.devMode>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
@@ -236,6 +243,51 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <!-- Module definitions, JsModuleInvokers and Page.executeModuleJs
+             (vaadin/flow#27425): the views and the IT in
+             src/module-invokers. Only Flow with that change has the API, so
+             they are kept out of the default build. They have their own
+             source folder, so the profile can be combined with one that sets
+             extra.cases. Install the add-on with the same profile -->
+        <profile>
+            <id>module-invokers</id>
+            <properties>
+                <it.moduleInvokers>true</it.moduleInvokers>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-module-invokers</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/module-invokers/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- A module definition whose module does not exist
+             (vaadin/flow#27425 with #27424): ModuleMissingView and
+             ModuleMissingIT. Needs Flow with vaadin/flow#27425 -->
+        <profile>
+            <id>module-missing</id>
+            <properties>
+                <extra.cases>module-missing</extra.cases>
+            </properties>
         </profile>
 
         <!-- Reached definitions that import modules that do not exist

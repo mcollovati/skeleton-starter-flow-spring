@@ -1,4 +1,4 @@
-# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441, #27423, #27424)
+# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441, #27423, #27424, #27425)
 
 This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
 (`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
@@ -603,6 +603,134 @@ took the nightly.) All cases fail, as expected:
 `MissingModuleIT` first used `Pattern.quote`. Playwright runs the pattern as
 a JavaScript regular expression, which has no `\Q...\E`, so the test failed
 on correct messages. Now it escapes the module by hand.
+
+## Module definitions (`JsModuleInvokers`, vaadin/flow#27425)
+
+vaadin/flow#27425 adds `JsModuleInvokers` and `Page.executeModuleJs`: a
+definition calls the exports of one module, with the module as `this`. The
+module must load with the route, like a `@JsModule`, so a call does not wait
+for `import()` and runs before the calls that follow it in the same round
+trip. Grid needs that: it sends `initLazy` and then calls that use
+`this.$connector`. The work is in two stacked PRs: vaadin/flow#27492 (API
+and rules) and vaadin/flow#27493 (route loading). The build imports the
+module in the chunk of each route that reaches the definition and registers
+it in `window.Vaadin.Flow.jsDefinitionModules`. The generated function takes
+it from there. When it is not there, the function loads it with `import()`
+and warns once in the browser.
+
+Only Flow with these PRs has the API, so the cases are in the profile
+`module-invokers`, in their own source folder (`app/src/module-invokers`,
+`addon/src/module-invokers`). The profile can be combined with one that sets
+`extra.cases`. The views are `/module-calls` (`ModuleCallsView`, all rows),
+`/module-other` (`ModuleOtherView`) and `/module-start` (`ModuleStartView`).
+The menu on the left shows them only when the profile is on.
+
+How the order is seen: `initLazy` (in each test module) adds `init` to
+`data-order` of the box and sets `$connector`. The call after it adds
+`after:ready`, or `after:missing` when it runs first. Each test also checks
+that the call did not load the module itself (no fallback warning), so a
+test fails if the registry was not used, even when the call works.
+
+| Row | Case | Expected |
+| --- | --- | --- |
+| M1 | on attach: `AppModuleJs.initLazy(box)` (`./app-module.js`), then a call on the box | `init after:ready`; the registry has `Frontend/app-module.js`, not the module of `/module-other` |
+| M2 | M1, M5, M11 when `/module-start` navigates to the view with the router | the same |
+| M3 | two round trips: `initLazy`, then the call after it | `init after:ready` |
+| M4 | a click attaches a new box and makes both calls (I13 with a module definition) | `init after:ready` |
+| M5 | add-on `ModuleBox`: `acme-module.js` in the jar, both calls in `onAttach` | `init after:ready`; key `Frontend/generated/jar-resources/acme-module.js` |
+| M6 | npm package `lit` as `this`: `this.render(this.html...)`, then a check on the box | `rendered` |
+| M7 | `@JsExpression("return this.format($0)")`, `PendingJavaScriptResult` | `value <seven>` |
+| M8 | the import without names plus `defaultExport` of `./app-format.js` | `value {<eight>}`, no fallback |
+| M9 | `@JsModule` and `@JsDefinitionImport` of `./app-module-side.js` on one definition | `init after:ready`, module evaluated once |
+| M10 | `./app-module-shared.js` reached from two views: increment, router to `/module-other`, increment | `1`, then `2`; evaluated once |
+| M11 | sub-interface that only inherits `AppModuleJs` | `init after:ready` |
+| M12 | `./app-module-query.js?v=2` | `init after:ready` (registry key with the query) |
+| M13 | `./app-module-noext` (no extension), in a click | `init after:ready`. **Fails, see below** |
+| M14 | in a click: a call on the box, then `initLazy`, then a call on the box | records the order the server sends, see below |
+| F1 | `ModuleOtherView.OtherOnlyJs`, called from `/module-calls` through reflection | first call late (`after:missing init`), one warning that names `app-module-other.js` and no Java class; later calls in order. After `/module-other` was shown: in order, no warning |
+| F2 | `UnreachedModuleJs`, no route reaches it, called through reflection | production: not in the bundle, `after:missing`, the server logs the #27078 error naming `UnreachedModuleJs`. Development: works |
+| R1 | only a named import | refused |
+| R2 | two imports without names | refused |
+| R3 | extends `JsModuleInvokers` and `JsInvokers` | refused |
+| R4 | sub-interface of `AppModuleJs` that declares its own method, without an import | refused (no import without names) |
+| R5 | extends `JsModuleInvokers` and `JsSnippets` | refused |
+| R6 | method for an export the module does not have | the call is sent; `TypeError: this.notExported is not a function` in the browser |
+| R7 | no `@JsDefinition` | refused |
+
+`Element.executeJs(...)` with a module definition does not compile, so it
+is not a row. `ModuleCallsIT` also checks, in production mode only, that the
+bundle registers modules (`jsDefinitionModules`) and does not have
+`app-module-unreached`.
+
+The profile `module-missing` adds `/module-missing` (`ModuleMissingView`,
+row U9): a reached module definition whose module does not exist. The chunk
+must not import it statically; with vaadin/flow#27424 the call throws on the
+server. `ModuleMissingIT` checks both.
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -Pmodule-invokers -pl addon
+mvn clean -Pit,module-invokers verify -pl app -Dit.test=ModuleCallsIT
+mvn clean -Pit,module-missing verify -pl app -Dit.test=ModuleMissingIT
+```
+
+Development mode (with this app it uses a dev bundle, not the Vite server):
+
+```
+rm -rf app/src/main/bundles
+mvn clean spring-boot:run -Pmodule-invokers -pl app
+mvn -Pit,module-invokers failsafe:integration-test -pl app -Dit.test=ModuleCallsIT -Dit.devMode=true
+```
+
+### Results (2026-11-28, vaadin/flow#27493 73da7a8d1f)
+
+- Production: `ModuleCallsIT` 27 of 28. Only M13 fails. The registry on
+  `/module-calls` has `Frontend/generated/jar-resources/acme-module.js`,
+  `Frontend/app-module.js`, `lit`, `Frontend/app-format.js`,
+  `Frontend/app-module-query.js?v=2`, `Frontend/app-module-shared.js`,
+  `Frontend/app-module-side.js`. The build logs one `ERROR` for each refused
+  definition (R1-R5), and they are left out of the bundle. A call of them is
+  refused on the server.
+- Development mode: 23 pass, 4 skipped (production only), M13 fails the same
+  way. The dev bundle check detects the new definitions and rebuilds the
+  bundle. The registry has every module, also those of `/module-other` and
+  of `UnreachedModuleJs`, so F2 works.
+- Control run on the base of the PR (vaadin/flow#27492 8a7fe1f5a0, no route
+  loading): 15 of 28 fail. These are the order rows on attach and in one
+  click (M1, M2, M4, M5, M6, M9, M11, M12, M14), F1 and the bundle check.
+  M3 passes there, since the module is loaded by the second click. So the
+  ITs find a missing registration.
+- U9 (`module-missing`): the chunk has no static import of the module, but
+  the production build still stops in Vite, on the `import()` of the
+  fallback in `vaadin-js-definitions.js`:
+  `[UNLOADABLE_DEPENDENCY] Could not load src/main/frontend/acme-module-does-not-exist.js`.
+  That is vaadin/flow#27424 (PR vaadin/flow#27491). Not yet run with both
+  PRs.
+
+**Finding 1: a module path without the extension is never registered
+(M13).** The chunk writer checks that the file exists with
+`importedFileExists(stripQuery(from))`. For `./app-module-noext` no such
+file exists, only `app-module-noext.js`, so it writes no registration and
+logs only at debug level. Vite resolves the `import()` in the generated
+function, so the call works, but it runs late and warns
+`Loading Frontend/app-module-noext for a call, since no view shown so far
+loaded it.` on every page load. This is the "both sides must resolve the
+path the same way" risk named on the issue. `@JsDefinitionImport` accepts a
+path without the extension (`rebuild-no-extension` profile).
+
+**Finding 2: an element call made before a module call runs after it
+(M14).** `Element.executeJs` queues its call when the response is written
+(`beforeClientResponse`), `Page.executeModuleJs` queues at once. So in one
+round trip, `record("before")`, `initLazy`, `record("after")` gives
+`init before:ready after:ready`. `Page.executeJs` does the same today, so
+this is not new, but `JsModuleInvokers` says that calls run "in the order of
+the calls". Code that resets an element and then calls `initLazy` loses the
+`initLazy` work. F1 first had such a reset in the view. Now the IT resets
+the box between clicks.
+
+Not covered yet: hotswap of a module file (Vite HMR) and of a definition
+(dev loop), and a dev bundle rebuild after a definition is added to a
+running project.
 
 ## Notes
 

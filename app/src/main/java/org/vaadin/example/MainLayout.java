@@ -11,6 +11,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Nav;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.router.Layout;
+import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.router.RouterLayout;
 import com.vaadin.flow.router.RouterLink;
 
@@ -43,6 +44,17 @@ public class MainLayout extends Div implements RouterLayout {
         menu.add(link("Imports, calls and refusals", ImportView.class));
         menu.add(link("Importing definition used only by reflection",
                 MissingImportView.class));
+        // Only with the module-invokers profile. Looked up by path, so this
+        // class compiles without the profile
+        RouteConfiguration routes = RouteConfiguration.forApplicationScope();
+        routes.getRoute("module-calls").ifPresent(calls -> {
+            menu.add(group("Module definitions (#27425)"));
+            menu.add(link("Module calls, order, fallback, rules", calls));
+            routes.getRoute("module-other").ifPresent(
+                    other -> menu.add(link("Other view (F1, M10)", other)));
+            routes.getRoute("module-start").ifPresent(
+                    start -> menu.add(link("Start view (M2)", start)));
+        });
 
         content.addClassName("content");
         addClassName("main-layout");

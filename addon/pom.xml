@@ -29,4 +29,35 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <!-- ModuleBox, a component with a JsModuleInvokers definition
+             (vaadin/flow#27425). Only Flow with that change has the API, so
+             it is kept out of the default build, like the cases in the app -->
+        <profile>
+            <id>module-invokers</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-module-invokers</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/module-invokers/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
