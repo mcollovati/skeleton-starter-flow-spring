@@ -551,9 +551,13 @@ Not in the IT, to check by hand after the fix:
 - Add `app/src/main/frontend/acme-does-not-exist.js` (with a default
   export): the next build runs Vite again, and U1 works.
 
-### Results (2026-11-28, feat/js-definition-import 9197eb4636, before #27424)
+### Results (2026-11-28, main nightly 25.5-20261128.033951, before #27424)
 
-All cases fail, as expected:
+This is the Flow nightly snapshot from vaadin-prereleases, which has
+#27457 (`@JsDefinitionImport`) and not #27424. (The first version of this
+section said 9197eb4636. That was wrong: a shell variable with two Maven
+flags was passed as one argument, so Maven used a new local repository and
+took the nightly.) All cases fail, as expected:
 
 - Production build: Vite stops the build.
   ```
@@ -570,6 +574,35 @@ All cases fail, as expected:
   failed to start: ...`. `MissingModuleIT#u*`: 8 of 8 fail (time-outs), U0
   too. So one definition with a wrong path stops every view of the
   application, also the ones that use no definition.
+
+### Results (2026-11-28, PR vaadin/flow#27491 d4a309eb16)
+
+- `mvn clean -Pit,missing-module verify -pl app`: `MissingModuleIT` 11 of
+  11. The whole run: 68 tests, 1 failure (I13, on purpose), 2 skipped. The
+  build logs one `ERROR` for each method that is left out, for example
+  `Leaving the JavaScript of ...MissingModuleView$MissingModuleJs.show out
+  of the bundle, so calling it fails: the module './acme-does-not-exist.js'
+  that ...MissingModuleJs imports with @JsDefinitionImport can not be found,
+  as no file ...`. Each line is logged twice, because the bundle check and
+  the generation both render the file. A call throws
+  `java.lang.IllegalStateException: Cannot call ...MissingModuleJs.show: the
+  frontend build could not find the module './acme-does-not-exist.js' ...`.
+- A second build with nothing changed logs `A production mode bundle build
+  is not needed`. After `acme-does-not-exist.js` is added, the next build
+  logs `Detected JavaScript that the bundle does not carry, declared by:
+  ...MissingModuleJs` and runs Vite. The module is then in its own chunk,
+  and the stats list only the other three modules.
+- Development mode: `MissingModuleIT#u*` 8 of 8; the dev bundle builds.
+- An npm package that is installed but not declared is left out too. A
+  definition with `@JsDefinitionImport(from = "@lit/reactive-element")`
+  (installed as a dependency of `lit`, not declared) logs `... the npm
+  package '@lit/reactive-element' is not a dependency of the project`.
+  Before the PR it worked through hoisting. (Checked with a temporary
+  view, not in this branch.)
+
+`MissingModuleIT` first used `Pattern.quote`. Playwright runs the pattern as
+a JavaScript regular expression, which has no `\Q...\E`, so the test failed
+on correct messages. Now it escapes the module by hand.
 
 ## Notes
 

@@ -122,9 +122,12 @@ class MissingModuleIT {
      * the module. The exception class is not fixed by the issue.
      */
     private void assertThrewOnServer(String id, int count, String module) {
+        // Playwright runs the pattern as a JavaScript regular expression,
+        // which has no \Q...\E, so Pattern.quote can not be used
+        String escaped = module.replaceAll("[.*+?^${}()|\\[\\]\\\\]",
+                "\\\\$0");
         assertThat(result(id)).hasText(Pattern.compile(
-                "failed " + count + ": .*" + Pattern.quote(module) + ".*",
-                Pattern.DOTALL));
+                "failed " + count + ": .*" + escaped + ".*", Pattern.DOTALL));
         System.out.println(id + ": " + result(id).textContent());
     }
 
