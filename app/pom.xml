@@ -238,32 +238,14 @@
             </build>
         </profile>
 
-        <!-- A reached definition that imports a module that does not exist
-             (vaadin/flow#27423, #27424). Kept out of the default build -->
+        <!-- Reached definitions that import modules that do not exist
+             (vaadin/flow#27424): MissingModuleView and MissingModuleIT.
+             Kept out of the default build, which they stop today -->
         <profile>
             <id>missing-module</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>add-missing-module</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>add-source</goal>
-                                </goals>
-                                <configuration>
-                                    <sources>
-                                        <source>src/missing-module/java</source>
-                                    </sources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <extra.cases>missing-module</extra.cases>
+            </properties>
         </profile>
 
         <!-- Review findings on vaadin/flow#27457 (see the README). Each one

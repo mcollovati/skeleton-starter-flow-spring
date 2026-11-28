@@ -1,4 +1,4 @@
-# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441, #27423)
+# Optimized bundle with add-on CSP fallbacks (vaadin/flow#27077, #27078, #27441, #27423, #27424)
 
 This branch is `repro/addon-csp-fallback-layer1` plus two add-on classes
 (`com.acme.addon.UnusedDefinition`, `com.acme.addon.ReflectedJs`), a view and
@@ -352,7 +352,9 @@ Each of these stops the build, so they are not in the default build.
   Vite fails: `[UNLOADABLE_DEPENDENCY] Could not load
   src/main/frontend/acme-does-not-exist.js`, and shows the generated line
   (`import("Frontend/acme-does-not-exist.js")`). The message does not name
-  the Java interface. Unresolved modules are vaadin/flow#27424.
+  the Java interface. Unresolved modules are vaadin/flow#27424; the profile
+  now has more cases, see
+  [Modules the build can not resolve](#modules-the-build-can-not-resolve-vaadinflow27424).
 
 ```
 rm -rf app/src/main/bundles
@@ -486,6 +488,88 @@ mvn clean -Pit,rebuild-jar-query verify -pl app
 `mvn clean -Pit verify -pl app` on 9197eb4636: 57 tests, 54 pass, 2 skipped,
 I13 fails on purpose. The same with `name-clash`, `rebuild-query` and
 `rebuild-no-extension`, where the profile's own test passes.
+
+## Modules the build can not resolve (vaadin/flow#27424)
+
+vaadin/flow#27424 asks that a module of `@JsDefinitionImport` that the
+build can not resolve does not stop the build. The functions of that
+definition are left out of the bundle, the build log has the full reason,
+the bundle says nothing about the cause, and a call of such a method throws
+on the server. Methods with resolved imports still work, inherited ones too.
+
+The `missing-module` profile adds `MissingModuleView` (`/missing-module`)
+and runs `MissingModuleIT`. Each row has a box, a button and a result. When
+the call throws on the server, the view catches the exception and shows
+`failed <n>: <exception>`, where n counts the failed calls.
+
+| Row | Case | Expected |
+| --- | --- | --- |
+| U0 | `ResolvedJs` imports `./app-format.js`, next to the broken ones | `{zero}`; the rest of the bundle works |
+| U1 | `MissingModuleJs.show()` imports `./acme-does-not-exist.js` (project file that does not exist) | throws on the server, the message names the module; nothing reaches the browser |
+| U2 | U1 called twice | throws both times |
+| U3 | `MissingModuleJs.call()` returns `PendingJavaScriptResult` | throws at the call, not as a failed result in the browser |
+| U4 | `MissingModuleJs.focus()`, no `@JsExpression`: its function imports the modules of the interface too | throws |
+| U5 | `ChildMissingJs` extends `ResolvedParent` (imports `./app-format.js`) and imports `./acme-child-missing.js` | inherited `parentFormatted()` gives `{five}`, own `childCall()` throws |
+| U6 | `MissingPackageJs` imports the npm package `acme-not-installed-package` | throws |
+| U7 | `Page.executeJs(PageMissingJs.class)`, imports `./acme-page-missing.js` | throws |
+| U8 | `UnreachedMissingJs`: no route uses it | not in a production bundle; in development mode it must not break the others |
+
+`MissingModuleIT` also checks, in production mode only:
+
+- `buildRecordsUnresolvedModules`: `stats.json` and
+  `vaadin-js-definition-ids.json` name the four unresolved modules of the
+  reached definitions.
+- `bundleDoesNotNameTheCause`: no file in `VAADIN/build` names the modules
+  or the Java interfaces.
+- `serverLogDoesNotAdviseUses`: the check of #27078 does not tell to add
+  `@Uses(...)` for these definitions. The definition is reached; the module
+  is what is missing.
+
+The message of the exception is not fixed by the issue. The IT only checks
+that it names the module.
+
+```
+rm -rf app/src/main/bundles
+mvn install -DskipTests -pl addon
+mvn clean -Pit,missing-module verify -pl app
+```
+
+Development mode:
+
+```
+rm -rf app/src/main/bundles
+mvn clean spring-boot:run -Pmissing-module -pl app
+mvn -Pit,missing-module failsafe:integration-test -pl app '-Dit.test=MissingModuleIT#u*'
+```
+
+Not in the IT, to check by hand after the fix:
+
+- A second `mvn clean -Pmissing-module package -DskipTests -pl app` with
+  nothing changed logs `A production mode bundle build is not needed`. The
+  functions that are left out must not count as "JavaScript that the bundle
+  does not carry", or every build runs Vite again.
+- Add `app/src/main/frontend/acme-does-not-exist.js` (with a default
+  export): the next build runs Vite again, and U1 works.
+
+### Results (2026-11-28, feat/js-definition-import 9197eb4636, before #27424)
+
+All cases fail, as expected:
+
+- Production build: Vite stops the build.
+  ```
+  [UNLOADABLE_DEPENDENCY] Could not load src/main/frontend/acme-does-not-exist.js
+   680 │   const $modules = await Promise.all([import("Frontend/acme-does-not-exist.js")]);
+  ```
+  The same for `acme-page-missing.js` and `acme-child-missing.js`. The
+  messages do not name the Java interface. U6 is not in this list: Rolldown
+  reports the files it can not load first. Built alone, U6 stops the build
+  too: `Rolldown failed to resolve import "acme-not-installed-package" from
+  ".../generated/vaadin-js-definitions.js"`.
+- Development mode: the application starts, but the dev bundle build fails
+  with the same Vite errors, and every page shows `The Vite dev server
+  failed to start: ...`. `MissingModuleIT#u*`: 8 of 8 fail (time-outs), U0
+  too. So one definition with a wrong path stops every view of the
+  application, also the ones that use no definition.
 
 ## Notes
 
