@@ -4,13 +4,17 @@ import org.vaadin.example.imports.ImportAddJs;
 import org.vaadin.example.imports.ImportDirectJs;
 import org.vaadin.example.imports.ImportParentChildJs;
 import org.vaadin.example.imports.ImportResourceJs;
+import org.vaadin.example.modules.ConnectorJs;
+import org.vaadin.example.modules.StatusJs;
 
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.SerializableConsumer;
+import com.vaadin.flow.js.JsModuleInvokers;
 import com.vaadin.flow.router.Route;
 
 /**
@@ -127,6 +131,63 @@ public class MainView extends Div {
         importRow("import-resource", "Run ImportResourceJs.show",
                 result -> result.getElement()
                         .executeJs(ImportResourceJs.class).show("clicked"));
+
+        add(new H3("Module definitions (vaadin/flow#27425)"));
+        add(new Paragraph("Each press makes a new element, calls the module"
+                + " and then StatusJs.show in the same round trip. The text"
+                + " is the connector version and 'after', or 'missing after'"
+                + " when the module call ran late."));
+        moduleRow("module-call", "Run ConnectorJs.initLazy",
+                element -> getUI().orElseThrow().getPage()
+                        .executeModuleJs(ConnectorJs.class)
+                        .initLazy(element));
+        moduleRow("module-tagged", "Run ConnectorJs.initLazyTagged",
+                element -> getUI().orElseThrow().getPage()
+                        .executeModuleJs(ConnectorJs.class)
+                        .initLazyTagged(element));
+        // J4: the class is added while the application runs, so it is
+        // looked up by name
+        moduleRow("module-added", "Run ConnectorAddedJs.initLazy",
+                this::callAdded);
+    }
+
+    private void moduleRow(String id, String text,
+            SerializableConsumer<Element> call) {
+        Div holder = new Div();
+        holder.setId(id + "-result");
+        holder.setText("not run");
+        NativeButton button = new NativeButton(text, e -> {
+            holder.removeAll();
+            holder.setText("");
+            Span result = new Span();
+            holder.add(result);
+            try {
+                call.accept(result.getElement());
+                result.getElement().executeJs(StatusJs.class).show("after");
+            } catch (RuntimeException ex) {
+                result.setText("refused: " + ex.getMessage());
+            }
+        });
+        button.setId(id);
+        add(new Div(button, holder));
+    }
+
+    private void callAdded(Element element) {
+        Class<? extends JsModuleInvokers> type;
+        try {
+            type = Class.forName("org.vaadin.example.modules.ConnectorAddedJs")
+                    .asSubclass(JsModuleInvokers.class);
+        } catch (ClassNotFoundException ex) {
+            throw new IllegalStateException("no class ConnectorAddedJs yet");
+        }
+        Object connector = getUI().orElseThrow().getPage()
+                .executeModuleJs(type);
+        try {
+            type.getMethod("initLazy", Element.class)
+                    .invoke(connector, element);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private void importRow(String id, String text,

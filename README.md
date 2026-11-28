@@ -1,4 +1,4 @@
-# JavaScript definition hierarchy and hotswap (vaadin/flow#27152, #27441, #27423)
+# JavaScript definition hierarchy and hotswap (vaadin/flow#27152, #27441, #27423, #27425)
 
 With vaadin/flow#27152, a JavaScript definition has `@JsDefinition` and
 extends `JsInvokers` or `JsSnippets`. This project checks what hotswap does
@@ -232,6 +232,98 @@ Notes:
 
 Not covered here: a module in a separate jar (the class-path file of M4 takes
 the same path), and the JBR with a changed method signature (see H4).
+
+Run `.vaadin/vaadin-dev shutdown` when done, and remove `.vaadin`, `.agents`
+and `.claude`.
+
+## Module definitions (`JsModuleInvokers`, vaadin/flow#27425)
+
+vaadin/flow#27425 adds `JsModuleInvokers` and `Page.executeModuleJs`: the
+methods of a module definition run with one module as `this`. The module is
+loaded with the route, or at startup in development mode: the imports file
+imports it and registers it in `window.Vaadin.Flow.jsDefinitionModules`. The
+generated function takes it from there, so the call does not wait for
+`import()` and runs before the calls that follow it. When the module is not
+registered, the function loads it with `import()`, warns once in the
+browser, and the call runs after the calls that follow it. These cases check
+what a hotswap does to the registration.
+
+The definition is `org.vaadin.example.modules.ConnectorJs`. Its module,
+`src/main/frontend/connector-v1.js`, sets `$connector` with a version on the
+element; `connector-v2.js` is the same with `v2`. Each button makes a new
+element, calls the module and then `StatusJs.show("after")` in the same
+round trip. The text is `<version> after`, or `missing after` when the
+module call ran late.
+
+| Case | Button | Change |
+|---|---|---|
+| J1 | "Run ConnectorJs.initLazy" | the module: `from = "./connector-v1.js"` to `"./connector-v2.js"`, then back |
+| J2 | "Run ConnectorJs.initLazyTagged" | only the expression: `' expr-v1'` to `' expr-v2'` |
+| J3 | "Run ConnectorJs.initLazy" | edit the module file: `version: 'v1'` to `'v1-edited'` |
+| J4 | "Run ConnectorAddedJs.initLazy" | add a new definition (below); before that the button shows `refused: no class ConnectorAddedJs yet` |
+
+J4 adds `src/main/java/org/vaadin/example/modules/ConnectorAddedJs.java`:
+
+```java
+@JsDefinition
+@JsDefinitionImport(from = "./connector-v2.js")
+public interface ConnectorAddedJs extends JsModuleInvokers {
+    void initLazy(Element element);
+}
+```
+
+To check that the registry was used, run this in the browser console:
+`Object.keys(window.Vaadin.Flow.jsDefinitionModules)`.
+
+### Results: vaadin/flow#27493 73da7a8d1f (2026-11-28)
+
+JDK 25. Flow modules of the PR in a private local repository (`MAVEN_ARGS`
+with `maven.repo.local.tail`), daemon jar of the PR through
+`-Dvaadin.dev.daemonJar`. The page was driven with Playwright.
+
+Before any change: the registry has `Frontend/connector-v1.js`, the buttons
+show `v1 after` and `v1 expr-v1 after`.
+
+With `-Dvaadin.frontend.hotdeploy=true` (Vite running):
+
+| Case | Result |
+|---|---|
+| J1 `apply --no-restart` | The dev loop says "frontend imports changed (ConnectorJs) ... escalating to restart", but only redefines. The registry still has only `connector-v1.js`. On each new page the first call loads `connector-v2.js` itself, warns `Loading Frontend/connector-v2.js for a call, since no view shown so far loaded it. That call runs after the calls that follow it.` and shows `missing after`. The next calls show `v2 after`. A plain `apply` after it only redefines again, with the same result |
+| J1 `restart` | the registry has `connector-v2.js`, `v2 after` with no warning |
+| J1 back, plain `apply` | restarts ("frontend imports changed (ConnectorJs)"), the registry has `connector-v1.js`, `v1 after` |
+| J2 `apply --no-restart`, page open | the next press shows `v1 expr-v2 after`, also after a reload; no warning (the module did not change). The dev loop asks for a restart, as it does for any changed expression |
+| J3, page open | Vite reloads the whole page (`hmr invalidate /generated/index.tsx`, `page reload`). Then `v1-edited after`, registered, no warning |
+| J4 `apply --no-restart` | the new class works, but through the fallback: the first call shows `missing after` with the warning for `connector-v2.js`, the next ones `v2 after` |
+| J4 `restart` | both modules are registered, `v2 after` with no warning |
+
+Without hot deploy (dev bundle):
+
+| Case | Result |
+|---|---|
+| J1 `apply --no-restart` | the hotswapper warns `The JavaScript declared by org.vaadin.example.modules.ConnectorJs is not the JavaScript the frontend bundle carries ...`; the browser logs `No JavaScript in the bundle for 8d5e58c5...` and shows `missing after`. Same as M1 |
+| J1 `restart` | `Detected JavaScript that the bundle does not carry, declared by: org.vaadin.example.modules.ConnectorJs`, a new dev bundle, the registry has `connector-v2.js`, `v2 after` |
+| J3, plain `apply` | restarts ("frontend changed (dev bundle rebuild)"), `v2-edited after` |
+
+At the end all the other buttons (#27152, #27441, #27423) still work.
+
+Summary: a pure redefine (the IDE hotswap path) of a changed module, or of
+a new module definition, does not update the registration. The calls work,
+but the first one on each page runs late and warns, until a restart. The
+dev loop restarts by itself for a plain `apply`, but not for an `apply`
+after `apply --no-restart`. An edit of the module file reloads the page
+(hot deploy) or restarts (dev bundle), and both register the new code. This
+matches the "Known limits" of the issue.
+
+Notes:
+
+- The log has `ERROR ... Leaving the JavaScript of
+  com.vaadin.flow.data.renderer.LitRendererJs out of the bundle: ... extends
+  none of JsInvokers, JsModuleInvokers and JsSnippets`. The class is in
+  `vaadin-renderer-flow` 25.4.0-beta2, built before the marker interfaces.
+  Not related to the cases.
+
+Not covered here: a module in a jar, and a module definition in a parent
+interface.
 
 Run `.vaadin/vaadin-dev shutdown` when done, and remove `.vaadin`, `.agents`
 and `.claude`.
